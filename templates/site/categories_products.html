@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'components/mini_header.html' %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Товары категории</h1>
+        <button class="btn btn-primary" id="addProductsBtn"><i class="bi bi-plus-circle me-2"></i>Добавить еще товары</button>
+    </div>
+    <div class="row fw-bold text-secondary mb-2 px-3">
+        <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-id">Фото <span id="sort-id-icon"></span></div>
+        <div class="col-12 col-md-4" style="cursor:pointer;" id="sort-name">Название <span id="sort-name-icon"></span></div>
+        <div class="col-6 col-md-2">Размер</div>
+        <div class="col-6 col-md-2">В наличии</div>
+        <div class="col-12 col-md-2 text-end" style="cursor:pointer;" id="sort-price">Цена <span id="sort-price-icon"></span></div>
+    </div>
+    <div id="products-list"></div>
+</div>
+
+<!-- Модальное окно для добавления товаров -->
+<div class="modal fade" id="addProductsModal" tabindex="-1" aria-labelledby="addProductsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addProductsModalLabel">Добавить товары в категорию</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="searchInputModal" class="form-control mb-3" placeholder="Поиск по названию или артикулу...">
+        <div id="all-products-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
+let categoryProducts = [];
+let sortField = 'id';
+let sortDir = 'desc';
+
+function renderCategoryProducts(products) {
+    // сортировка
+    const sorted = [...products].sort((a, b) => {
+        let av, bv;
+        if (sortField === 'id') {
+            av = a.good_id; bv = b.good_id;
+        } else if (sortField === 'name') {
+            av = (a.fashion_name || '').toLowerCase();
+            bv = (b.fashion_name || '').toLowerCase();
+        } else if (sortField === 'price') {
+            av = parseFloat(a.retail_price_with_discount || a.retail_price);
+            bv = parseFloat(b.retail_price_with_discount || b.retail_price);
+        } else {
+            av = a[sortField]; bv = b[sortField];
+        }
+        if (av < bv) return sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+    document.getElementById('sort-id-icon').textContent = sortField==='id' ? (sortDir==='asc'?'▲':'▼') : '';
+    document.getElementById('sort-name-icon').textContent = sortField==='name' ? (sortDir==='asc'?'▲':'▼') : '';
+    document.getElementById('sort-price-icon').textContent = sortField==='price' ? (sortDir==='asc'?'▲':'▼') : '';
+
+    const list = document.getElementById('products-list');
+    if (!Array.isArray(sorted) || sorted.length === 0) {
+        list.innerHTML = '<div class="alert alert-info">Нет товаров в категории</div>';
+        return;
+    }
+    list.innerHTML = sorted.map(product => {
+        const mainImg = (product.images || []).find(img => img.is_main) || (product.images || [])[0];
+        return `
+            <div class="card mb-2 product-row px-3">
+                <div class="card-body row align-items-start g-0 mb-0">
+                    <div class="col-12 col-md-2 d-flex align-items-center justify-content-center mb-2 mb-md-0">
+                        <div class="ratio ratio-1x1 w-100" style="max-width:90px;">
+                            ${mainImg ? `<img src="${mainImg.image_url}" class="object-fit-cover rounded" alt="${product.fashion_name || ''}">` : '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Нет фото</div>'}
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4 mb-2 mb-md-0">
+                        <div class="fw-bold">${product.fashion_name || ''}</div>
+                        <div class="text-muted small">Артикул: <b>${product.articul || ''}</b></div>
+                    </div>
+                    <div class="col-6 col-md-2 mb-2 mb-md-0">Размер: <b>${product.product_size || ''}</b></div>
+                    <div class="col-6 col-md-2 mb-2 mb-md-0">В наличии: <b>${product.warehouse_quantity || 0}</b></div>
+                    <div class="col-12 col-md-2 text-end">
+                        <span class="fw-bold">${product.retail_price_with_discount && product.retail_price_with_discount != product.retail_price ? `<span class='text-danger'>${product.retail_price_with_discount}</span> <span class='text-decoration-line-through text-muted small ms-1'>${product.retail_price}</span>` : product.retail_price}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderAllProductsModal(allProducts) {
+    const search = document.getElementById('searchInputModal').value.trim().toLowerCase();
+    let filtered = allProducts.filter(product => {
+        const name = (product.fashion_name || '').toLowerCase();
+        const articul = (product.articul || '').toLowerCase();
+        return name.includes(search) || articul.includes(search);
+    });
+    const list = document.getElementById('all-products-list');
+    if (!Array.isArray(filtered) || filtered.length === 0) {
+        list.innerHTML = '<div class="alert alert-info">Нет товаров</div>';
+        return;
+    }
+    list.innerHTML = filtered.map(product => {
+        const mainImg = (product.images || []).find(img => img.is_main) || (product.images || [])[0];
+        return `
+            <div class="card mb-2 product-row px-3">
+                <div class="card-body row align-items-start g-0 mb-0">
+                    <div class="col-12 col-md-2 d-flex align-items-center justify-content-center mb-2 mb-md-0">
+                        <div class="ratio ratio-1x1 w-100" style="max-width:90px;">
+                            ${mainImg ? `<img src="${mainImg.image_url}" class="object-fit-cover rounded" alt="${product.fashion_name || ''}">` : '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Нет фото</div>'}
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4 mb-2 mb-md-0">
+                        <div class="fw-bold">${product.fashion_name || ''}</div>
+                        <div class="text-muted small">Артикул: <b>${product.articul || ''}</b></div>
+                    </div>
+                    <div class="col-12 col-md-2 text-end">
+                        <span class="fw-bold">${product.retail_price_with_discount && product.retail_price_with_discount != product.retail_price ? `<span class='text-danger'>${product.retail_price_with_discount}</span> <span class='text-decoration-line-through text-muted small ms-1'>${product.retail_price}</span>` : product.retail_price}</span>
+                        <button class="btn btn-success btn-sm ms-2" onclick="addProductToCategory(${product.good_id}); event.stopPropagation();">+</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function addProductToCategory(productId) {
+    const token = document.cookie.split('; ').find(row => row.startsWith('Bearer=')).split('=')[1];
+    fetch(`${SiteUrlAndPort}/custom-categories/${categoryId}/products/${productId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+    }).then(res => {
+        if (res.ok) {
+            alert('Товар добавлен в категорию');
+            // После добавления можно обновить основной список товаров категории
+            fetchCategoryProducts();
+        } else {
+            alert('Ошибка при добавлении товара');
+        }
+    });
+}
+
+function fetchCategoryProducts() {
+    fetch(`${SiteUrlAndPort}/custom-categories/${categoryId}/products/`)
+        .then(res => res.json())
+        .then(products => {
+            categoryProducts = products;
+            renderCategoryProducts(categoryProducts);
+        })
+        .catch(() => {
+            document.getElementById('products-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки товаров категории</div>';
+        });
+}
+
+fetchCategoryProducts();
+
+document.getElementById('sort-id').onclick = function() {
+    if (sortField === 'id') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortField = 'id'; sortDir = 'desc'; }
+    renderCategoryProducts(categoryProducts);
+};
+document.getElementById('sort-name').onclick = function() {
+    if (sortField === 'name') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortField = 'name'; sortDir = 'asc'; }
+    renderCategoryProducts(categoryProducts);
+};
+document.getElementById('sort-price').onclick = function() {
+    if (sortField === 'price') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortField = 'price'; sortDir = 'desc'; }
+    renderCategoryProducts(categoryProducts);
+};
+
+document.getElementById('addProductsBtn').onclick = function() {
+    // Открыть модальное окно
+    const modal = new bootstrap.Modal(document.getElementById('addProductsModal'));
+    modal.show();
+    // Загрузить все товары
+    fetch(`${SiteUrlAndPort}/products/`)
+        .then(res => res.json())
+        .then(products => {
+            // Исключить уже добавленные
+            const ids = new Set(categoryProducts.map(p => p.good_id));
+            const notInCategory = products.filter(p => !ids.has(p.good_id));
+            renderAllProductsModal(notInCategory);
+            document.getElementById('searchInputModal').oninput = function() {
+                renderAllProductsModal(notInCategory);
+            };
+        })
+        .catch(() => {
+            document.getElementById('all-products-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки товаров</div>';
+        });
+};
+</script>
+{% endblock %} 

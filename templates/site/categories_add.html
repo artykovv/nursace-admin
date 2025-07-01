@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'components/mini_header.html' %}
+<div class="container mt-4">
+    <h1>Добавить категорию</h1>
+    <form id="add-category-form">
+        <div class="mb-3">
+            <label for="category-name" class="form-label">Название</label>
+            <input type="text" class="form-control" id="category-name" required>
+        </div>
+        <button type="submit" class="btn btn-success">Сохранить</button>
+    </form>
+</div>
+<script>
+const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
+
+    document.getElementById('add-category-form').onsubmit = async function(e) {
+        e.preventDefault();
+        const payload = {
+            category_name: document.getElementById('category-name').value,
+        };
+        const token = document.cookie.split('; ').find(row => row.startsWith('Bearer=')).split('=')[1];
+        const res = await fetch(`${SiteUrlAndPort}/custom-categories/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            window.location = '/site/categories';
+        } else {
+            alert('Ошибка добавления категории');
+        }
+    }
+</script>
+{% endblock %} 

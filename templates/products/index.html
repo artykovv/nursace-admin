@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Товары</h1>
+            <a href="#" class="btn btn-primary d-flex align-items-center">
+                <i class="bi bi-plus-circle me-2"></i> Добавить
+            </a>
+        </div>
+        <div class="row fw-bold text-secondary mb-2 px-3">
+            <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-id">Фото <span id="sort-id-icon"></span></div>
+            <div class="col-12 col-md-4" style="cursor:pointer;" id="sort-name">Название <span id="sort-name-icon"></span></div>
+            <div class="col-6 col-md-2">Размер</div>
+            <div class="col-6 col-md-2">В наличии</div>
+            <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-price">Цена <span id="sort-price-icon"></span></div>
+        </div>
+        <div id="products-list"></div>
+    </div>
+
+    <script>
+    const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
+    let sortField = 'id';
+    let sortDir = 'desc';
+
+    function renderProducts(products) {
+        // сортировка
+        const sorted = [...products].sort((a, b) => {
+            let av, bv;
+            if (sortField === 'id') {
+                av = a.good_id; bv = b.good_id;
+            } else if (sortField === 'name') {
+                av = (a.fashion_name || '').toLowerCase();
+                bv = (b.fashion_name || '').toLowerCase();
+            } else if (sortField === 'price') {
+                av = parseFloat(a.retail_price_with_discount || a.retail_price);
+                bv = parseFloat(b.retail_price_with_discount || b.retail_price);
+            } else {
+                av = a[sortField]; bv = b[sortField];
+            }
+            if (av < bv) return sortDir === 'asc' ? -1 : 1;
+            if (av > bv) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+        // визуальные индикаторы
+        document.getElementById('sort-id-icon').textContent = sortField==='id' ? (sortDir==='asc'?'▲':'▼') : '';
+        document.getElementById('sort-name-icon').textContent = sortField==='name' ? (sortDir==='asc'?'▲':'▼') : '';
+        document.getElementById('sort-price-icon').textContent = sortField==='price' ? (sortDir==='asc'?'▲':'▼') : '';
+
+        const list = document.getElementById('products-list');
+        if (!Array.isArray(sorted) || sorted.length === 0) {
+            list.innerHTML = '<div class="alert alert-info">Нет товаров</div>';
+            return;
+        }
+        list.innerHTML = sorted.map(product => {
+            const mainImg = (product.images || []).find(img => img.is_main) || (product.images || [])[0];
+            return `
+                <div class="card mb-2 product-row px-3" style="cursor:pointer;" onclick="window.location='/products/${product.good_id}'">
+                    <div class="card-body row align-items-start g-0 mb-0">
+                        <div class="col-12 col-md-2 d-flex align-items-center justify-content-center mb-2 mb-md-0">
+                            <div class="ratio ratio-1x1 w-100" style="max-width:90px;">
+                                ${mainImg ? `<img src="${mainImg.image_url}" class="object-fit-cover rounded" alt="${product.fashion_name || ''}">` : '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Нет фото</div>'}
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4 mb-2 mb-md-0">
+                            <div class="fw-bold">${product.fashion_name || ''}</div>
+                            <div class="text-muted small">Артикул: <b>${product.articul || ''}</b></div>
+                        </div>
+                        <div class="col-6 col-md-2 mb-2 mb-md-0">Размер: <b>${product.product_size || ''}</b></div>
+                        <div class="col-6 col-md-2 mb-2 mb-md-0">В наличии: <b>${product.warehouse_quantity || 0}</b></div>
+                        <div class="col-12 col-md-2 text-end">
+                            <span class="fw-bold">${product.retail_price_with_discount && product.retail_price_with_discount != product.retail_price ? `<span class='text-danger'>${product.retail_price_with_discount}</span> <span class='text-decoration-line-through text-muted small ms-1'>${product.retail_price}</span>` : product.retail_price}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    fetch(`${SiteUrlAndPort}/products/`)
+        .then(res => res.json())
+        .then(products => {
+            renderProducts(products);
+            document.getElementById('sort-id').onclick = function() {
+                if (sortField === 'id') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                else { sortField = 'id'; sortDir = 'desc'; }
+                renderProducts(products);
+            };
+            document.getElementById('sort-name').onclick = function() {
+                if (sortField === 'name') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                else { sortField = 'name'; sortDir = 'asc'; }
+                renderProducts(products);
+            };
+            document.getElementById('sort-price').onclick = function() {
+                if (sortField === 'price') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                else { sortField = 'price'; sortDir = 'desc'; }
+                renderProducts(products);
+            };
+        })
+        .catch(() => {
+            document.getElementById('products-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки товаров</div>';
+        });
+    </script>
+{% endblock %} 

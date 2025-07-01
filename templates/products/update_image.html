@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-3">
+        <a href="/products/{{ product_id }}" class="btn btn-link">&larr; К товару</a>
+    </div>
+    <h2>Изменить изображения товара #{{ product_id }}</h2>
+    <div id="image-section"></div>
+    <div class="mt-4 text-end">
+        <button id="save-images" class="btn btn-success">Сохранить</button>
+    </div>
+</div>
+
+<style>
+    .product-image-list { display: flex; flex-wrap: wrap; gap: 16px; }
+    .product-image-card {
+        border: 2px solid #eee;
+        border-radius: 8px;
+        padding: 8px;
+        width: 160px;
+        text-align: center;
+        position: relative;
+        background: #fafafa;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        cursor: grab;
+    }
+    .product-image-card.main {
+        border-color: #ffc107;
+        background: #fffbe6;
+    }
+    .product-image-card img {
+        max-width: 100%;
+        max-height: 120px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+    }
+    .product-image-actions { display: flex; gap: 4px; justify-content: center; }
+    .product-image-card .main-badge {
+        position: absolute;
+        top: 4px; left: 4px;
+        background: #ffc107;
+        color: #222;
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+    .product-image-card .remove-btn {
+        position: absolute;
+        top: 4px; right: 4px;
+        background: #dc3545;
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        width: 24px; height: 24px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    .add-image-btn {
+        margin-top: 16px;
+    }
+</style>
+
+<script>
+const SiteUrl = "{{ site_url_and_port }}";
+const productId = "{{ product_id }}";
+const uploadUrl = `${SiteUrl}/storage/upload`;
+const productApiUrl = `${SiteUrl}/products/${productId}`;
+const imagesApiUrl = `${SiteUrl}/products/${productId}/images`;
+const PLACEHOLDER_IMAGE = "https://placehold.co/160x120";
+let images = [];
+let newImages = [];
+
+function getToken() {
+    const match = document.cookie.match(/(?:^|; )Bearer=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+const token = getToken();
+
+function fetchWithAuth(url, options = {}) {
+    options.headers = {
+        ...(options.headers || {}),
+        "Authorization": `Bearer ${token}`,
+        ...((options.body instanceof FormData) ? {} : {"Content-Type": "application/json"}),
+        "Accept": "application/json"
+    };
+    return fetch(url, options);
+}
+
+async function fetchImages() {
+    const res = await fetchWithAuth(productApiUrl);
+    if (!res.ok) throw new Error('Ошибка загрузки товара');
+    const product = await res.json();
+    return (product.images || []).map(img => ({
+        image_id: img.image_id,
+        image_url: img.image_url,
+        is_main: !!img.is_main,
+        is_new: false
+    }));
+}
+
+function renderImages() {
+    const allImages = [...images, ...newImages];
+    let html = `<div class="product-image-list" id="image-list">`;
+    allImages.forEach((img, idx) => {
+        html += `<div class="product-image-card${img.is_main ? ' main' : ''}" draggable="true" data-idx="${idx}">
+            <img src="${img.image_url || PLACEHOLDER_IMAGE}" alt="image">
+            ${img.is_main ? '<span class="main-badge">Главное</span>' : ''}
+            <button class="remove-btn" title="Удалить" type="button">&times;</button>
+            <div class="product-image-actions">
+                ${!img.is_main ? `<button class="btn btn-sm btn-outline-warning set-main-btn" style="display:none;" type="button">Сделать главным</button>` : ''}
+            </div>
+        </div>`;
+    });
+    html += `<div class="product-image-card add-image-btn" style="border-style:dashed;cursor:pointer;" id="add-image-btn">
+        <div style="font-size:32px;">+</div>
+        <div style="font-size:14px;">Добавить</div>
+        <input type="file" accept="image/*" style="display:none;" id="file-input">
+    </div>`;
+    html += `</div>`;
+    document.getElementById('image-section').innerHTML = html;
+    addImageEventListeners();
+    enableDragAndDrop();
+}
+
+function addImageEventListeners() {
+    // Удаление
+    document.querySelectorAll('.remove-btn').forEach((btn, idx) => {
+        btn.onclick = async (e) => {
+            e.stopPropagation();
+            const all = [...images, ...newImages];
+            const img = all[idx];
+            if (img.is_new) {
+                newImages = newImages.filter(n => n !== img);
+                renderImages();
+            } else {
+                // Удаляем с сервера
+                if (!confirm('Удалить изображение?')) return;
+                try {
+                    const res = await fetchWithAuth(imagesApiUrl, {
+                        method: 'DELETE',
+                        body: JSON.stringify([img.image_id])
+                    });
+                    if (res.ok) {
+                        images = images.filter(i => i !== img);
+                        renderImages();
+                    } else {
+                        alert('Ошибка при удалении');
+                    }
+                } catch {
+                    alert('Ошибка при удалении');
+                }
+            }
+        };
+    });
+    // Сделать главным
+    document.querySelectorAll('.set-main-btn').forEach((btn, idx) => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const all = [...images, ...newImages];
+            all.forEach(i => i.is_main = false);
+            all[idx].is_main = true;
+            images = all.filter(i => !i.is_new);
+            newImages = all.filter(i => i.is_new);
+            renderImages();
+        };
+    });
+    // Добавить
+    const addBtn = document.getElementById('add-image-btn');
+    const fileInput = document.getElementById('file-input');
+    addBtn.onclick = () => fileInput.click();
+    fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('files', file);
+        try {
+            const res = await fetchWithAuth(uploadUrl, { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.uploaded_urls && data.uploaded_urls.length > 0) {
+                newImages.push({ image_url: data.uploaded_urls[0], is_main: false, is_new: true });
+                renderImages();
+            } else {
+                alert('Ошибка загрузки файла');
+            }
+        } catch {
+            alert('Ошибка загрузки файла');
+        }
+        fileInput.value = '';
+    };
+}
+
+function enableDragAndDrop() {
+    const list = document.getElementById('image-list');
+    let dragIdx = null;
+    list.querySelectorAll('.product-image-card').forEach((card, idx) => {
+        card.ondragstart = (e) => {
+            dragIdx = idx;
+            e.dataTransfer.effectAllowed = 'move';
+        };
+        card.ondragover = (e) => {
+            e.preventDefault();
+            card.style.borderColor = '#007bff';
+        };
+        card.ondragleave = () => {
+            card.style.borderColor = '';
+        };
+        card.ondrop = (e) => {
+            e.preventDefault();
+            card.style.borderColor = '';
+            if (dragIdx === null || dragIdx === idx) return;
+            const all = [...images, ...newImages];
+            const [moved] = all.splice(dragIdx, 1);
+            all.splice(idx, 0, moved);
+            images = all.filter(i => !i.is_new);
+            newImages = all.filter(i => i.is_new);
+            renderImages();
+        };
+        card.ondragend = () => {
+            dragIdx = null;
+            card.style.borderColor = '';
+        };
+    });
+}
+
+async function saveImages() {
+    const all = [...images, ...newImages];
+    if (all.length === 0) {
+        alert('Добавьте хотя бы одно изображение');
+        return;
+    }
+    if (!all.some(i => i.is_main)) all[0].is_main = true;
+    const payload = all.map((img, idx) => ({
+        image_url: img.image_url,
+        is_main: !!img.is_main,
+        order: idx
+    }));
+    const res = await fetchWithAuth(imagesApiUrl, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+        window.location = `/products/${productId}`;
+    } else {
+        alert('Ошибка при сохранении');
+    }
+}
+
+document.getElementById('save-images').onclick = saveImages;
+
+fetchImages().then(list => {
+    images = list;
+    newImages = [];
+    renderImages();
+}).catch(() => {
+    images = [];
+    newImages = [];
+    renderImages();
+});
+</script>
+{% endblock %} 

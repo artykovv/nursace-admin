@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'components/mini_header.html' %}
+<div class="container mt-4">
+    <h1>Изменить документ</h1>
+    <form id="update-document-form">
+        <div class="mb-3">
+            <label for="doc-title" class="form-label">Название</label>
+            <input type="text" class="form-control" id="doc-title" required>
+        </div>
+        <div class="mb-3">
+            <label for="doc-slug" class="form-label">Slug</label>
+            <input type="text" class="form-control" id="doc-slug" required>
+        </div>
+        <div class="mb-3">
+            <label for="doc-content" class="form-label">Текст документа</label>
+            <textarea class="form-control" id="doc-content" rows="10" required></textarea>
+        </div>
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="doc-active">
+            <label class="form-check-label" for="doc-active">Активен</label>
+        </div>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+    </form>
+</div>
+<script>
+const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
+const docId = window.location.pathname.split('/').pop();
+fetch(`${SiteUrlAndPort}/documents/${docId}`)
+  .then(r => r.json())
+  .then(doc => {
+    document.getElementById('doc-title').value = doc.title;
+    document.getElementById('doc-slug').value = doc.slug;
+    document.getElementById('doc-active').checked = doc.is_active;
+    document.getElementById('doc-content').value = doc.content || '';
+  });
+document.getElementById('update-document-form').onsubmit = async function(e) {
+  e.preventDefault();
+  const payload = {
+    title: document.getElementById('doc-title').value,
+    slug: document.getElementById('doc-slug').value,
+    is_active: document.getElementById('doc-active').checked,
+    content: document.getElementById('doc-content').value
+  };
+  const token = document.cookie.split('; ').find(row => row.startsWith('Bearer=')).split('=')[1];
+  const res = await fetch(`${SiteUrlAndPort}/documents/${docId}`, {
+    method: 'PUT',
+    headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (res.ok) {
+    window.location = '/site/documents';
+  } else {
+    alert('Ошибка сохранения');
+  }
+};
+</script>
+{% endblock %} 

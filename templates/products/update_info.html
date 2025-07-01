@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-3">
+        <a href="/products/{{ product_id }}" class="btn btn-link">← К товару</a>
+    </div>
+    <h2>Изменить товар #{{ product_id }}</h2>
+    <div id="edit-section"></div>
+</div>
+
+<script>
+const SiteUrl = "{{ site_url_and_port }}";
+const productId = "{{ product_id }}";
+const PLACEHOLDER_IMAGE = "https://placehold.co/500x500";
+
+function getToken() {
+    const match = document.cookie.match(/(?:^|; )Bearer=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+const token = getToken();
+
+function fetchWithAuth(url, options = {}) {
+    options.headers = {
+        ...(options.headers || {}),
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    };
+    return fetch(url, options);
+}
+
+async function fetchJSON(url) {
+    const response = await fetchWithAuth(url);
+    if (!response.ok) throw new Error(`Failed to fetch ${url}`);
+    return response.json();
+}
+
+function renderSelect(name, options, selectedId, label) {
+    // Ensure selectedId is a number or null for consistent comparison
+    const safeSelectedId = selectedId != null ? Number(selectedId) : null;
+    return `
+        <div class="mb-2">
+            <label class="form-label">${label}</label>
+            <select class="form-select" name="${name}">
+                ${options.map(opt => `<option value="${opt.id}" ${Number(opt.id) === safeSelectedId ? 'selected' : ''}>${opt.category_name || opt.manufacturer_name || opt.collection_name || opt.season_name || opt.sex_name || opt.color_name || opt.material_name || opt.name}</option>`).join('')}
+            </select>
+        </div>
+    `;
+}
+
+function renderEditForm(product, dicts) {
+    // Normalize product IDs to numbers or null for consistent comparison
+    const normalizedProduct = {
+        ...product,
+        category_id: product.category_id != null ? Number(product.category_id) : null,
+        manufacturer_id: product.manufacturer_id != null ? Number(product.manufacturer_id) : null,
+        collection_id: product.collection_id != null ? Number(product.collection_id) : null,
+        season_id: product.season_id != null ? Number(product.season_id) : null,
+        sex_id: product.sex_id != null ? Number(product.sex_id) : null,
+        color_id: product.color_id != null ? Number(product.color_id) : null,
+        material_id: product.material_id != null ? Number(product.material_id) : null,
+        warehouse_quantity: product.warehouse_quantity != null ? Number(product.warehouse_quantity) : null,
+        retail_price: product.retail_price != null ? Number(product.retail_price) : null,
+        retail_price_with_discount: product.retail_price_with_discount != null ? Number(product.retail_price_with_discount) : null
+    };
+
+    document.getElementById('edit-section').innerHTML = `
+        <form id="edit-product-form" class="mt-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <label class="form-label">Название</label>
+                        <input type="text" class="form-control" name="good_name" value="${product.good_name || ''}" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Артикул</label>
+                        <input type="text" class="form-control" name="articul" value="${product.articul || ''}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control" name="description">${product.description || ''}</textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Размер</label>
+                        <input type="text" class="form-control" name="product_size" value="${product.product_size || ''}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">В наличии</label>
+                        <input type="number" class="form-control" name="warehouse_quantity" value="${product.warehouse_quantity || 0}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <label class="form-label">Цена</label>
+                        <input type="number" class="form-control" name="retail_price" value="${product.retail_price || ''}" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Цена со скидкой</label>
+                        <input type="number" class="form-control" name="retail_price_with_discount" value="${product.retail_price_with_discount || ''}">
+                    </div>
+                    ${renderSelect('category_id', dicts.categories, product.category_id, 'Категория')}
+                    ${renderSelect('manufacturer_id', dicts.manufacturers, product.manufacturer_id, 'Бренд')}
+                    ${renderSelect('collection_id', dicts.collections, product.collection_id, 'Коллекция')}
+                    ${renderSelect('season_id', dicts.seasons, product.season_id, 'Сезон')}
+                    ${renderSelect('sex_id', dicts.sexes, product.sex_id, 'Пол')}
+                    ${renderSelect('color_id', dicts.colors, product.color_id, 'Цвет')}
+                    ${renderSelect('material_id', dicts.materials, product.material_id, 'Материал')}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-success mt-3">Сохранить</button>
+            <a href="/products/${product.good_id}" class="btn btn-secondary mt-3 ms-2">Отмена</a>
+        </form>
+    `;
+    document.getElementById('edit-section').style.display = '';
+
+    document.getElementById('edit-product-form').onsubmit = async function(e) {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const payload = {};
+        const fields = [
+            'good_name', 'articul', 'description', 'product_size', 'warehouse_quantity',
+            'retail_price', 'retail_price_with_discount', 'category_id', 'manufacturer_id',
+            'collection_id', 'season_id', 'sex_id', 'color_id', 'material_id'
+        ];
+
+        for (const key of fields) {
+            let value = fd.get(key);
+            // Convert to number for numeric fields, handle empty strings as null
+            if (['warehouse_quantity', 'retail_price', 'retail_price_with_discount', 
+                 'category_id', 'manufacturer_id', 'collection_id', 'season_id', 
+                 'sex_id', 'color_id', 'material_id'].includes(key)) {
+                value = value === '' ? null : Number(value);
+            }
+            // Compare with initial normalized product value
+            const initialValue = normalizedProduct[key] === undefined ? null : normalizedProduct[key];
+            if (value !== initialValue) {
+                payload[key] = value;
+            }
+        }
+
+        // Only send request if payload has changes
+        if (Object.keys(payload).length > 0) {
+            try {
+                const res = await fetchWithAuth(`${SiteUrl}/products/${productId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Ошибка при сохранении');
+                window.location = `/products/${productId}`;
+            } catch {
+                alert('Ошибка при сохранении');
+            }
+        } else {
+            alert('Изменений не обнаружено');
+        }
+    };
+}
+
+Promise.all([
+    fetchJSON(`${SiteUrl}/products/${productId}`),
+    fetchJSON(`${SiteUrl}/categories/`),
+    fetchJSON(`${SiteUrl}/manufacturers/`),
+    fetchJSON(`${SiteUrl}/collections/`),
+    fetchJSON(`${SiteUrl}/seasons/`),
+    fetchJSON(`${SiteUrl}/sexes/`),
+    fetchJSON(`${SiteUrl}/colors/`),
+    fetchJSON(`${SiteUrl}/materials/`)
+]).then(([product, categories, manufacturers, collections, seasons, sexes, colors, materials]) => {
+    renderEditForm(product, {
+        categories,
+        manufacturers,
+        collections,
+        seasons,
+        sexes,
+        colors,
+        materials
+    });
+}).catch(() => {
+    document.getElementById('edit-section').innerHTML = '<div class="alert alert-danger">Ошибка загрузки товара или справочников</div>';
+});
+</script>
+{% endblock %}

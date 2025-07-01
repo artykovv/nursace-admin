@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'components/mini_header.html' %}
+<div class="container mt-4">
+    <h1>Баннер</h1>
+    <div class="container">
+      <div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner rounded" id="carouselInner">
+          <!-- JS will insert items here -->
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Next</span>
+        </button>
+      </div>
+    </div>
+    <a href="/site/banner/update" class="btn btn-warning mt-3 w-100">Изменить</a>
+</div>
+<script>
+const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
+
+fetch(`${SiteUrlAndPort}/carousel/`)
+  .then(response => response.json())
+  .then(carouselData => {
+    const carouselInner = document.getElementById("carouselInner");
+    carouselData.forEach((item, index) => {
+      const carouselItem = document.createElement("div");
+      carouselItem.className = "carousel-item" + (index === 0 ? " active" : "");
+
+      const img = document.createElement("img");
+      img.src = item.src;
+      img.className = "d-block w-100";
+      img.alt = `Slide ${index + 1}`;
+      carouselItem.appendChild(img);
+      carouselInner.appendChild(carouselItem);
+    });
+  })
+  .catch(error => {
+    console.error('Ошибка загрузки карусели:', error);
+  });
+</script>
+{% endblock %} 

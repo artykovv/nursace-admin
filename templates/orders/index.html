@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1>Заказы</h1>
+            <a href="#" class="btn btn-primary d-flex align-items-center">
+                <i class="bi bi-plus-circle me-2"></i> Добавить
+            </a>
+        </div>
+        <div class="row fw-bold text-secondary mb-2 px-3">
+            <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-id">Заказ <span id="sort-id-icon"></span></div>
+            <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-client">Клиент</div>
+            <div class="col-12 col-md-3" style="cursor:pointer;" id="sort-date">Дата <span id="sort-date-icon"></span></div>
+            <div class="col-12 col-md-3" style="cursor:pointer;" id="sort-status">Статус</div>
+            <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-price">Итог <span id="sort-price-icon"></span></div>
+        </div>
+        <div id="orders-list"></div>
+    </div>
+
+<script>
+const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
+
+let sortField = 'id';
+let sortDir = 'desc';
+
+function renderOrders(data, statusMap) {
+    // сортировка
+    const sorted = [...data].sort((a, b) => {
+        let av, bv;
+        if (sortField === 'id') {
+            av = a.id; bv = b.id;
+        } else if (sortField === 'date') {
+            av = new Date(a.created_at); bv = new Date(b.created_at);
+        } else if (sortField === 'price') {
+            av = parseFloat(a.total_price); bv = parseFloat(b.total_price);
+        } else {
+            av = a[sortField]; bv = b[sortField];
+        }
+        if (av < bv) return sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+    // визуальные индикаторы
+    document.getElementById('sort-id-icon').textContent = sortField==='id' ? (sortDir==='asc'?'▲':'▼') : '';
+    document.getElementById('sort-date-icon').textContent = sortField==='date' ? (sortDir==='asc'?'▲':'▼') : '';
+    document.getElementById('sort-price-icon').textContent = sortField==='price' ? (sortDir==='asc'?'▲':'▼') : '';
+
+    const list = document.getElementById('orders-list');
+    if (!Array.isArray(sorted) || sorted.length === 0) {
+        list.innerHTML = '<div class="alert alert-info">Нет заказов</div>';
+        return;
+    }
+    list.innerHTML = sorted.map(order => {
+        const statusObj = statusMap[order.status_id] || {};
+        const statusText = statusObj.description || statusObj.name || order.status_id || '';
+        return `
+            <div class="card mb-2 order-row px-3" style="cursor:pointer;" onclick="window.location='/orders/${order.id}'">
+                <div class="card-body row text-start align-items-center g-0 mb-0">
+                    <div class="col-12 col-md-2 mb-2 mb-md-0"><b>#${order.id}</b></div>
+                    <div class="col-12 col-md-2 mb-2 mb-md-0">${order.info?.first_name || ''} ${order.info?.last_name || ''}</div>
+                    <div class="col-12 col-md-3 mb-2 mb-md-0">${order.created_at ? new Date(order.created_at).toLocaleString() : ''}</div>
+                    <div class="col-12 col-md-3 mb-2 mb-md-0">${statusText}</div>
+                    <div class="col-12 col-md-2 mb-2 mb-md-0"><b>${order.total_price}</b></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+Promise.all([
+    fetch(`${SiteUrlAndPort}/orders/`).then(res => res.json()),
+    fetch(`${SiteUrlAndPort}/orders/statuses/`).then(res => res.json())
+]).then(([orders, statuses]) => {
+    const statusMap = {};
+    if (Array.isArray(statuses)) {
+        statuses.forEach(s => statusMap[s.id] = s);
+    }
+    renderOrders(orders, statusMap);
+    document.getElementById('sort-id').onclick = function() {
+        if (sortField === 'id') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else { sortField = 'id'; sortDir = 'desc'; }
+        renderOrders(orders, statusMap);
+    };
+    document.getElementById('sort-date').onclick = function() {
+        if (sortField === 'date') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else { sortField = 'date'; sortDir = 'desc'; }
+        renderOrders(orders, statusMap);
+    };
+    document.getElementById('sort-price').onclick = function() {
+        if (sortField === 'price') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        else { sortField = 'price'; sortDir = 'desc'; }
+        renderOrders(orders, statusMap);
+    };
+}).catch(() => {
+    document.getElementById('orders-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки заказов</div>';
+});
+</script>
+{% endblock %} 

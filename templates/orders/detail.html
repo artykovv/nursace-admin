@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-3">
+        <a href="/orders" class="btn btn-link">&larr; К списку заказов</a>
+    </div>
+    <h2 id="order-title">Заказ #{{ order_id }}</h2>
+    <div id="order-detail"></div>
+</div>
+
+<script>
+const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
+
+let statusesList = [];
+
+function getToken() {
+    const match = document.cookie.match(/(?:^|; )Bearer=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+const token = getToken();
+
+function fetchWithAuth(url, options = {}) {
+    options.headers = {
+        ...(options.headers || {}),
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    };
+    return fetch(url, options);
+}
+
+function fetchJsonWithAuth(url) {
+    return fetchWithAuth(url).then(res => res.json());
+}
+
+fetchJsonWithAuth(`${SiteUrlAndPort}/orders/${orderId}`)
+    .then(order => {
+        if (!order || !order.id) {
+            document.getElementById('order-detail').innerHTML = '<div class="alert alert-danger">Заказ не найден</div>';
+            return;
+        }
+        let info = order.info || {};
+        let items = order.items || [];
+        document.getElementById('order-title').textContent = `Заказ #${order.id}`;
+        document.getElementById('order-detail').innerHTML = `
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h5>Покупатель</h5>
+                    <div><b>${info.first_name || ''} ${info.last_name || ''}</b></div>
+                    <div>${info.address_line1 || ''}</div>
+                    <div>${info.city || ''}${info.region ? ', ' + info.region : ''}</div>
+                    <div>${info.phone || ''}</div>
+                </div>
+                <div class="col-md-6">
+                    <h5>Информация о заказе</h5>
+                    <div>Создан: ${order.created_at ? new Date(order.created_at).toLocaleString() : ''}</div>
+                    <div>Статус: <span id="order-status">${order.status_id || ''}</span></div>
+                    <div>Сумма: <b>${order.total_price}</b></div>
+                    <a class="btn btn-warning mt-2" href="/orders/${order.id}/update">Изменить</a>
+                </div>
+            </div>
+            <h5>Товары</h5>
+            <div class="table-responsive">
+                <table class="table table-bordered" id="order-items-table">
+                    <thead><tr><th>ID</th><th>Товар</th><th>Кол-во</th><th>Цена</th></tr></thead>
+                    <tbody>
+                        ${items.map((item, idx) => `
+                            <tr data-idx="${idx}" data-product-id="${item.product_id}">
+                                <td>${item.product_id}</td>
+                                <td class="product-name">-</td>
+                                <td>${item.quantity}</td>
+                                <td>${item.price}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        // Подгружаем статус
+        fetchJsonWithAuth(`${SiteUrlAndPort}/orders/statuses/`)
+            .then(statuses => {
+                statusesList = statuses;
+                const statusObj = (statuses || []).find(s => s.id === order.status_id);
+                if (statusObj) {
+                    document.getElementById('order-status').textContent = statusObj.description || statusObj.name;
+                }
+            });
+        // Подгружаем имена товаров
+        items.forEach((item, idx) => {
+            fetchJsonWithAuth(`${SiteUrlAndPort}/products/${item.product_id}`)
+                .then(product => {
+                    const name = product.good_name || '-';
+                    const row = document.querySelector(`#order-items-table tr[data-idx='${idx}'] .product-name`);
+                    if (row) row.textContent = name;
+                });
+        });
+    })
+    .catch(() => {
+        document.getElementById('order-detail').innerHTML = '<div class="alert alert-danger">Ошибка загрузки заказа</div>';
+    });
+</script>
+{% endblock %} 

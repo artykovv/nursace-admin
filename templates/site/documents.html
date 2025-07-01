@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'components/mini_header.html' %}
+<div class="container mt-4">
+    <h1>Документы</h1>
+    <a href="/site/documents/add" class="btn btn-success mb-3">Добавить документ</a>
+    <div id="documents-list"></div>
+</div>
+<script>
+const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
+
+fetch(`${SiteUrlAndPort}/documents/`)
+  .then(response => response.json())
+  .then(docs => {
+    const list = document.getElementById('documents-list');
+    if (!docs.length) {
+      list.innerHTML = '<div class="alert alert-info">Документов нет</div>';
+      return;
+    }
+    let html = '<ul class="list-group">';
+    docs.forEach(doc => {
+      html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>${doc.title}</span>
+        <div class="d-flex gap-2">
+          <a href="/site/documents/update/${doc.id}" class="btn btn-sm btn-warning">Изменить</a>
+          <button class="btn btn-sm btn-danger" onclick="deleteDocument(${doc.id})">Удалить</button>
+        </div>
+      </li>`;
+    });
+    html += '</ul>';
+    list.innerHTML = html;
+  })
+  .catch(() => {
+    document.getElementById('documents-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки документов</div>';
+  });
+
+  function deleteDocument(docId) {
+    if (confirm('Вы уверены, что хотите удалить этот документ?')) {
+      const token = document.cookie.split('; ').find(row => row.startsWith('Bearer=')).split('=')[1];
+      fetch(`${SiteUrlAndPort}/documents/${docId}`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${token}`
+        }
+      }).then(response => {
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          alert('Ошибка при удалении документа');
+        }
+      });
+    }
+  }
+</script>
+{% endblock %} 

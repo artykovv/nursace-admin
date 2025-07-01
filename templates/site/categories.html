@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'components/mini_header.html' %}
+<div class="container mt-4">
+    <h1>Категории</h1>
+    <a href="/site/categories/add" class="btn btn-success mb-3">Добавить категорию</a>
+    <div id="categories-list"></div>
+</div>
+<script>
+const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
+    fetch(`${SiteUrlAndPort}/custom-categories/`)
+        .then(response => response.json())
+        .then(categories => {
+            const list = document.getElementById('categories-list');
+            if (!categories.length) {
+                list.innerHTML = '<div class="alert alert-info">Категорий нет</div>';
+                return;
+            }
+            let html = '<ul class="list-group">';
+            categories.forEach(category => {
+                html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>${category.category_name}</span>
+                    <div class="d-flex gap-2">
+                        <a href="/site/categories/${category.category_id}/products" class="btn btn-sm btn-primary">Товары</a>
+                        <a href="/site/categories/update/${category.category_id}" class="btn btn-sm btn-warning">Изменить</a>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCategory(${category.category_id})">Удалить</button>
+                    </div>
+                </li>`;
+            });
+            html += '</ul>';
+            list.innerHTML = html;
+        });
+    function deleteCategory(categoryId) {
+        if (confirm('Вы уверены, что хотите удалить эту категорию?')) {
+            const token = document.cookie.split('; ').find(row => row.startsWith('Bearer=')).split('=')[1];
+            fetch(`${SiteUrlAndPort}/custom-categories/${categoryId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Ошибка при удалении категории');
+                }
+            });
+        }
+    }
+</script>
+{% endblock %} 
