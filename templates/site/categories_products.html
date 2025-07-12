@@ -34,6 +34,8 @@
 
 <script>
 const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
+const categoryId = "{{ category_id }}";
+
 let categoryProducts = [];
 let sortField = 'id';
 let sortDir = 'desc';
@@ -144,11 +146,15 @@ function addProductToCategory(productId) {
 }
 
 function fetchCategoryProducts() {
-    fetch(`${SiteUrlAndPort}/custom-categories/${categoryId}/products/`)
+    fetch(`${SiteUrlAndPort}/custom-categories/${categoryId}/products`)
         .then(res => res.json())
         .then(products => {
             categoryProducts = products;
-            renderCategoryProducts(categoryProducts);
+            if (!Array.isArray(products) || products.length === 0) {
+                document.getElementById('products-list').innerHTML = '<div class="alert alert-info">Нет товаров</div>';
+            } else {
+                renderCategoryProducts(categoryProducts);
+            }
         })
         .catch(() => {
             document.getElementById('products-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки товаров категории</div>';

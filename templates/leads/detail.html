@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Детали лида</h1>
+        <a href="/leads/" class="btn btn-secondary">
+            <i class="bi bi-arrow-left me-2"></i> Назад к списку
+        </a>
+    </div>
+    
+    <div id="loading" class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Загрузка...</span>
+        </div>
+    </div>
+    
+    <div id="lead-details" style="display: none;">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Основная информация</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>ID:</strong></td>
+                                <td id="lead-id"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>ФИО:</strong></td>
+                                <td id="lead-full-name"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Телефон:</strong></td>
+                                <td id="lead-phone"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Статус:</strong></td>
+                                <td id="lead-status"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Дата создания:</strong></td>
+                                <td id="lead-created-at"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Комментарий</h5>
+                    </div>
+                    <div class="card-body">
+                        <p id="lead-comment" class="mb-0"></p>
+                    </div>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Товары</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="lead-products">
+                            <p class="text-muted">Товары не указаны</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="error" class="alert alert-danger" style="display: none;">
+        Ошибка при загрузке данных лида
+    </div>
+</div>
+
+<script>
+const SiteUrl = "{{ site_url_and_port }}";
+const leadId = "{{ lead_id }}";
+
+async function fetchLeadDetails() {
+    try {
+        const response = await fetch(`${SiteUrl}/leads/${leadId}`, {
+            headers: {
+                'accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Ошибка загрузки данных');
+        }
+        
+        const lead = await response.json();
+        
+        // Скрываем загрузку и показываем детали
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('lead-details').style.display = 'block';
+        
+        // Заполняем данные
+        document.getElementById('lead-id').textContent = lead.id || '';
+        document.getElementById('lead-full-name').textContent = lead.full_name || 'Не указано';
+        document.getElementById('lead-phone').textContent = lead.phone_number || 'Не указано';
+        document.getElementById('lead-status').textContent = lead.status && lead.status.name ? lead.status.name : 'Не указано';
+        
+        // Форматируем дату
+        let createdAt = 'Не указано';
+        if (lead.created_at) {
+            const d = new Date(lead.created_at);
+            if (!isNaN(d)) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const hh = String(d.getHours()).padStart(2, '0');
+                const min = String(d.getMinutes()).padStart(2, '0');
+                const ss = String(d.getSeconds()).padStart(2, '0');
+                createdAt = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+            }
+        }
+        document.getElementById('lead-created-at').textContent = createdAt;
+        
+        // Комментарий
+        document.getElementById('lead-comment').textContent = lead.comment || 'Комментарий отсутствует';
+        
+        // Товары
+        const productsContainer = document.getElementById('lead-products');
+        if (lead.products && lead.products.length > 0) {
+            let productsHtml = '<ul class="list-group list-group-flush">';
+            lead.products.forEach(item => {
+                const p = item.product || {};
+                const name = p.good_name || 'Без названия';
+                const articul = p.articul ? `Артикул: ${p.articul}` : '';
+                const quantity = item.quantity ? `Кол-во: ${item.quantity}` : '';
+                const price = (p.retail_price_with_discount || p.retail_price) ? `Цена: ${(p.retail_price_with_discount || p.retail_price)}` : '';
+                productsHtml += `<li class="list-group-item">
+                    <div><strong>${name}</strong></div>
+                    <div>${articul}</div>
+                    <div>${quantity}</div>
+                    <div>${price}</div>
+                </li>`;
+            });
+            productsHtml += '</ul>';
+            productsContainer.innerHTML = productsHtml;
+        } else {
+            productsContainer.innerHTML = '<p class="text-muted mb-0">Товары не указаны</p>';
+        }
+        
+    } catch (error) {
+        console.error('Ошибка:', error);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+    }
+}
+
+window.addEventListener('DOMContentLoaded', fetchLeadDetails);
+</script>
+{% endblock %} 

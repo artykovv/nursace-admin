@@ -7,14 +7,20 @@
                 <i class="bi bi-plus-circle me-2"></i> Добавить
             </a>
         </div>
-        <div class="row fw-bold text-secondary mb-2 px-3">
-            <div class="col-12 col-md-3">Почта</div>
-            <div class="col-12 col-md-2">Имя</div>
-            <div class="col-12 col-md-2">Фамилия</div>
-            <div class="col-12 col-md-3">Дата регистрации</div>
-            <div class="col-12 col-md-2">Заказы</div>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Почта</th>
+                        <th>Имя</th>
+                        <th>Фамилия</th>
+                        <th>Дата регистрации</th>
+                        <th>Заказы</th>
+                    </tr>
+                </thead>
+                <tbody id="clients-list"></tbody>
+            </table>
         </div>
-        <div id="clients-list"></div>
     </div>
     <script>
     const SiteUrl = "{{ site_url_and_port }}";
@@ -29,12 +35,12 @@
         return fetch(url, options);
     }
 
-    async function fetchOrderCount(user_id) {
+    async function fetchOrderCount(session_id) {
         try {
-            const res = await fetchWithAuth(`${SiteUrl}/cart/count?user_id=${user_id}`);
+            const res = await fetchWithAuth(`${SiteUrl}/orders/?session_id=${session_id}`);
             if (!res.ok) return '—';
             const data = await res.json();
-            return typeof data.count === 'number' ? data.count : '—';
+            return Array.isArray(data) ? data.length : '—';
         } catch {
             return '—';
         }
@@ -43,28 +49,26 @@
     function renderClients(clients) {
         const list = document.getElementById('clients-list');
         if (!Array.isArray(clients) || clients.length === 0) {
-            list.innerHTML = '<div class="alert alert-info">Нет клиентов</div>';
+            list.innerHTML = '<tr><td colspan="5"><div class="alert alert-info mb-0">Нет клиентов</div></td></tr>';
             return;
         }
         list.innerHTML = clients.map(c => {
-            const cardId = `client-card-${c.id}`;
+            const rowId = `client-row-${c.id}`;
             return `
-                <div class="card mb-2 client-row px-3" style="cursor:pointer;" id="${cardId}" onclick="window.location='#'">
-                    <div class="card-body row text-start align-items-center g-0 mb-0">
-                        <div class="col-12 col-md-3 mb-2 mb-md-0"><b>${c.email || ''}</b></div>
-                        <div class="col-12 col-md-2 mb-2 mb-md-0">${c.name || ''}</div>
-                        <div class="col-12 col-md-2 mb-2 mb-md-0">${c.lastname || ''}</div>
-                        <div class="col-12 col-md-3 mb-2 mb-md-0">${c.register_at ? new Date(c.register_at).toLocaleString() : ''}</div>
-                        <div class="col-12 col-md-2 mb-2 mb-md-0"><span class="order-count">Загрузка…</span></div>
-                    </div>
-                </div>
+                <tr style="cursor:pointer;" id="${rowId}" onclick="window.location='#'">
+                    <td><b>${c.email || ''}</b></td>
+                    <td>${c.name || ''}</td>
+                    <td>${c.lastname || ''}</td>
+                    <td>${c.register_at ? new Date(c.register_at).toLocaleString() : ''}</td>
+                    <td><span class="order-count">Загрузка…</span></td>
+                </tr>
             `;
         }).join('');
         // После рендера — подгружаем количество заказов
         clients.forEach(async c => {
-            const count = await fetchOrderCount(c.id);
-            const card = document.getElementById(`client-card-${c.id}`);
-            if (card) card.querySelector('.order-count').textContent = count;
+            const count = await fetchOrderCount(c.session_id);
+            const row = document.getElementById(`client-row-${c.id}`);
+            if (row) row.querySelector('.order-count').textContent = count;
         });
     }
 
@@ -72,7 +76,7 @@
         .then(res => res.json())
         .then(renderClients)
         .catch(() => {
-            document.getElementById('clients-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки клиентов</div>';
+            document.getElementById('clients-list').innerHTML = '<tr><td colspan="5"><div class="alert alert-danger mb-0">Ошибка загрузки клиентов</div></td></tr>';
         });
     </script>
 {% endblock %} 

@@ -7,6 +7,54 @@
                 <i class="bi bi-plus-circle me-2"></i> Добавить
             </a>
         </div>
-        <p>Здесь будет список лидов.</p>
+        <table class="table" id="leads-table">
+            <thead>
+                <tr>
+                    <th>ФИО</th>
+                    <th>Телефон</th>
+                    <th>Статус</th>
+                    <th>Дата создания</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
+<script>
+const SiteUrl = "{{ site_url_and_port }}";
+
+async function fetchLeads() {
+    const res = await fetch(`${SiteUrl}/leads/`, {
+        headers: {
+            'accept': 'application/json'
+        }
+    });
+    const leads = await res.json();
+    const tbody = document.querySelector('#leads-table tbody');
+    tbody.innerHTML = '';
+    leads.forEach(lead => {
+        // Человеческий формат даты
+        let createdAt = lead.created_at;
+        if (createdAt) {
+            const d = new Date(createdAt);
+            if (!isNaN(d)) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const hh = String(d.getHours()).padStart(2, '0');
+                const min = String(d.getMinutes()).padStart(2, '0');
+                const ss = String(d.getSeconds()).padStart(2, '0');
+                createdAt = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+            }
+        }
+        tbody.innerHTML += `<tr>
+            <td><a href="/leads/${lead.id}" class="text-decoration-none">${lead.full_name || ''}</a></td>
+            <td>${lead.phone_number || ''}</td>
+            <td>${lead.status && lead.status.name ? lead.status.name : ''}</td>
+            <td>${createdAt || ''}</td>
+        </tr>`;
+    });
+}
+
+window.addEventListener('DOMContentLoaded', fetchLeads);
+</script>
 {% endblock %} 

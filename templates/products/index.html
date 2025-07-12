@@ -7,22 +7,35 @@
                 <i class="bi bi-plus-circle me-2"></i> Добавить
             </a>
         </div>
-        <div class="row fw-bold text-secondary mb-2 px-3">
-            <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-id">Фото <span id="sort-id-icon"></span></div>
-            <div class="col-12 col-md-4" style="cursor:pointer;" id="sort-name">Название <span id="sort-name-icon"></span></div>
-            <div class="col-6 col-md-2">Размер</div>
-            <div class="col-6 col-md-2">В наличии</div>
-            <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-price">Цена <span id="sort-price-icon"></span></div>
+        <form class="mb-3 d-flex gap-2" id="product-search-form" onsubmit="return false;">
+            <input type="text" id="product-search" class="form-control" placeholder="Поиск по названию, артикулу...">
+            <button type="submit" class="btn btn-outline-primary">Найти</button>
+        </form>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th style="cursor:pointer;" id="sort-id">Фото <span id="sort-id-icon"></span></th>
+                        <th style="cursor:pointer;" id="sort-name">Название <span id="sort-name-icon"></span></th>
+                        <th>Размер</th>
+                        <th>В наличии</th>
+                        <th style="cursor:pointer;" id="sort-price">Цена <span id="sort-price-icon"></span></th>
+                    </tr>
+                </thead>
+                <tbody id="products-list"></tbody>
+            </table>
         </div>
-        <div id="products-list"></div>
     </div>
 
     <script>
     const SiteUrlAndPort = window.SiteUrlAndPort || "{{ site_url_and_port }}";
     let sortField = 'id';
     let sortDir = 'desc';
+    let lastProducts = [];
+    let lastSearch = '';
 
     function renderProducts(products) {
+        lastProducts = products;
         // сортировка
         const sorted = [...products].sort((a, b) => {
             let av, bv;
@@ -48,56 +61,75 @@
 
         const list = document.getElementById('products-list');
         if (!Array.isArray(sorted) || sorted.length === 0) {
-            list.innerHTML = '<div class="alert alert-info">Нет товаров</div>';
+            list.innerHTML = '<tr><td colspan="5"><div class="alert alert-info mb-0">Нет товаров</div></td></tr>';
             return;
         }
         list.innerHTML = sorted.map(product => {
             const mainImg = (product.images || []).find(img => img.is_main) || (product.images || [])[0];
             return `
-                <div class="card mb-2 product-row px-3" style="cursor:pointer;" onclick="window.location='/products/${product.good_id}'">
-                    <div class="card-body row align-items-start g-0 mb-0">
-                        <div class="col-12 col-md-2 d-flex align-items-center justify-content-center mb-2 mb-md-0">
-                            <div class="ratio ratio-1x1 w-100" style="max-width:90px;">
-                                ${mainImg ? `<img src="${mainImg.image_url}" class="object-fit-cover rounded" alt="${product.fashion_name || ''}">` : '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Нет фото</div>'}
-                            </div>
+                <tr style="cursor:pointer;" onclick="window.location='/products/${product.good_id}'">
+                    <td class="align-middle text-center" style="max-width:90px;">
+                        <div class="ratio ratio-1x1 w-100" style="max-width:90px;">
+                            ${mainImg ? `<img src="${mainImg.image_url}" class="object-fit-cover rounded" alt="${product.fashion_name || ''}" style="max-width:80px;max-height:80px;">` : '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Нет фото</div>'}
                         </div>
-                        <div class="col-12 col-md-4 mb-2 mb-md-0">
-                            <div class="fw-bold">${product.fashion_name || ''}</div>
-                            <div class="text-muted small">Артикул: <b>${product.articul || ''}</b></div>
-                        </div>
-                        <div class="col-6 col-md-2 mb-2 mb-md-0">Размер: <b>${product.product_size || ''}</b></div>
-                        <div class="col-6 col-md-2 mb-2 mb-md-0">В наличии: <b>${product.warehouse_quantity || 0}</b></div>
-                        <div class="col-12 col-md-2 text-end">
-                            <span class="fw-bold">${product.retail_price_with_discount && product.retail_price_with_discount != product.retail_price ? `<span class='text-danger'>${product.retail_price_with_discount}</span> <span class='text-decoration-line-through text-muted small ms-1'>${product.retail_price}</span>` : product.retail_price}</span>
-                        </div>
-                    </div>
-                </div>
+                    </td>
+                    <td class="align-middle">
+                        <div class="fw-bold">${product.fashion_name || ''}</div>
+                        <div class="text-muted small">Артикул: <b>${product.articul || ''}</b></div>
+                    </td>
+                    <td class="align-middle">${product.product_size || ''}</td>
+                    <td class="align-middle">${product.warehouse_quantity || 0}</td>
+                    <td class="align-middle text-end">
+                        <span class="fw-bold">${product.retail_price_with_discount && product.retail_price_with_discount != product.retail_price ? `<span class='text-danger'>${product.retail_price_with_discount}</span> <span class='text-decoration-line-through text-muted small ms-1'>${product.retail_price}</span>` : product.retail_price}</span>
+                    </td>
+                </tr>
             `;
         }).join('');
     }
 
-    fetch(`${SiteUrlAndPort}/products/`)
-        .then(res => res.json())
-        .then(products => {
-            renderProducts(products);
-            document.getElementById('sort-id').onclick = function() {
-                if (sortField === 'id') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-                else { sortField = 'id'; sortDir = 'desc'; }
+    function fetchProducts(search = '') {
+        lastSearch = search;
+        let url = `${SiteUrlAndPort}/products/`;
+        if (search) {
+            url += `?search=${encodeURIComponent(search)}`;
+        }
+        fetch(url)
+            .then(res => res.json())
+            .then(products => {
                 renderProducts(products);
-            };
-            document.getElementById('sort-name').onclick = function() {
-                if (sortField === 'name') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-                else { sortField = 'name'; sortDir = 'asc'; }
-                renderProducts(products);
-            };
-            document.getElementById('sort-price').onclick = function() {
-                if (sortField === 'price') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-                else { sortField = 'price'; sortDir = 'desc'; }
-                renderProducts(products);
-            };
-        })
-        .catch(() => {
-            document.getElementById('products-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки товаров</div>';
+            })
+            .catch(() => {
+                document.getElementById('products-list').innerHTML = '<tr><td colspan="5"><div class="alert alert-danger mb-0">Ошибка загрузки товаров</div></td></tr>';
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchProducts();
+        document.getElementById('sort-id').onclick = function() {
+            if (sortField === 'id') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            else { sortField = 'id'; sortDir = 'desc'; }
+            renderProducts(lastProducts);
+        };
+        document.getElementById('sort-name').onclick = function() {
+            if (sortField === 'name') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            else { sortField = 'name'; sortDir = 'asc'; }
+            renderProducts(lastProducts);
+        };
+        document.getElementById('sort-price').onclick = function() {
+            if (sortField === 'price') sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            else { sortField = 'price'; sortDir = 'desc'; }
+            renderProducts(lastProducts);
+        };
+        document.getElementById('product-search-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            fetchProducts(document.getElementById('product-search').value.trim());
         });
+        document.getElementById('product-search').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                fetchProducts(e.target.value.trim());
+            }
+        });
+    });
     </script>
 {% endblock %} 

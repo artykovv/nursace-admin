@@ -1,8 +1,232 @@
 {% extends "base.html" %}
 
 {% block content %}
+    <style>
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 600;
+            line-height: 1.1;
+        }
+        .stat-label {
+            font-size: 0.98rem;
+            color: #6c757d;
+        }
+        .fade-in {
+            opacity: 0;
+            transition: opacity 0.7s;
+        }
+        .fade-in.visible {
+            opacity: 1;
+        }
+        .card-icon {
+            font-size: 1.5rem;
+            vertical-align: middle;
+            color: #6c757d;
+        }
+        .card-header {
+            background: #fff;
+            border-bottom: none;
+            font-weight: 500;
+            font-size: 1.08rem;
+            padding-bottom: 0.5rem;
+        }
+        .card {
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        .btn-animated:hover {
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.07);
+        }
+        .list-group-item {
+            border: none;
+            background: transparent;
+            padding-left: 0;
+            padding-right: 0;
+        }
+        .badge {
+            font-size: 0.95em;
+        }
+        /* --- Equal height for top 3 cards --- */
+        .dashboard-row {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .dashboard-row > [class^='col-'],
+        .dashboard-row > [class*=' col-'] {
+            display: flex;
+            flex-direction: column;
+        }
+        .dashboard-equal-card {
+            flex: 1 1 auto;
+            min-height: 230px;
+            display: flex;
+            flex-direction: column;
+            justify-content: stretch;
+        }
+        @media (max-width: 991.98px) {
+            .dashboard-row { flex-direction: column; gap: 1rem; }
+            .dashboard-equal-card { min-height: unset; }
+        }
+    </style>
     <div class="container mt-4">
-        <h1>Главная</h1>
-        <p>Здесь будет информация о главной странице.</p>
+        <h1 class="mb-4">Главная</h1>
+        <div class="row g-4 dashboard-row">
+            <div class="col-md-4">
+                <div class="card mb-3 shadow-sm fade-in dashboard-equal-card" id="orders-card">
+                    <div class="card-header d-flex align-items-center bg-white">
+                        <i class="bi bi-bag-check-fill me-2 card-icon" data-bs-toggle="tooltip" title="Заказы"></i>
+                        Заказы за сегодня
+                    </div>
+                    <div class="card-body text-center pb-3 pt-2">
+                        <div id="orders-summary-card">
+                            <div class="text-muted">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card mb-3 shadow-sm fade-in dashboard-equal-card" id="leads-card">
+                    <div class="card-header d-flex align-items-center bg-white">
+                        <i class="bi bi-person-lines-fill me-2 card-icon" data-bs-toggle="tooltip" title="Лиды"></i>
+                        Лиды по статусам
+                    </div>
+                    <div class="card-body text-center pb-3 pt-2">
+                        <div id="leads-summary-card">
+                            <div class="text-muted">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card mb-3 shadow-sm fade-in dashboard-equal-card" id="clients-card">
+                    <div class="card-header d-flex align-items-center bg-white">
+                        <i class="bi bi-people me-2 card-icon" data-bs-toggle="tooltip" title="Клиенты"></i>
+                        Клиенты
+                    </div>
+                    <div class="card-body text-center pb-3 pt-2">
+                        <div id="clients-summary-card">
+                            <div class="text-muted">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card mb-3 shadow-sm fade-in" id="products-card">
+                    <div class="card-header d-flex align-items-center bg-white">
+                        <i class="bi bi-star me-2 card-icon" data-bs-toggle="tooltip" title="Топ товары"></i>
+                        Топ-5 товаров
+                    </div>
+                    <div class="card-body text-center pb-3 pt-2">
+                        <div id="products-summary-card">
+                            <div class="text-muted">Загрузка...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4 text-center">
+            <a href="/report/" class="btn btn-outline-primary btn-animated"><i class="bi bi-bar-chart-line me-2"></i>Детальный отчет</a>
+        </div>
     </div>
+<script>
+const SiteUrl = "{{ site_url_and_port }}";
+const token = (document.cookie.match(/(?:^|; )Bearer=([^;]*)/)||[])[1] || '';
+
+function fadeInCard(id) {
+    setTimeout(() => {
+        document.getElementById(id).classList.add('visible');
+    }, 100);
+}
+
+async function loadMiniReport() {
+    const today = new Date().toISOString().split('T')[0];
+    // 1. Заказы за сегодня
+    const ordersRes = await fetch(
+        `${SiteUrl}/mini/report/report?start_date=${today}&end_date=${today}`,
+        { headers: { 'accept': 'application/json', 'Authorization': 'Bearer ' + token } }
+    );
+    const ordersData = await ordersRes.json();
+    const orders = ordersData.length > 0 ? ordersData[0] : {orders_count: 0, total_sum: 0};
+    const ordersCard = document.getElementById('orders-summary-card');
+    ordersCard.innerHTML = `<div class="mb-2 stat-value text-primary">${orders.orders_count}</div>
+        <div class="stat-label mb-3">Количество заказов</div>
+        <div class="mb-2 stat-value text-success">${orders.total_sum}</div>
+        <div class="stat-label">Сумма заказов</div>`;
+    fadeInCard('orders-card');
+
+    // 2. Лиды по статусам
+    const leadsRes = await fetch(
+        `${SiteUrl}/mini/report/leads-by-status?start_date=${today}&end_date=${today}`,
+        { headers: { 'accept': 'application/json', 'Authorization': 'Bearer ' + token } }
+    );
+    const leadsStatus = await leadsRes.json();
+    const leadsCount = leadsStatus.reduce((acc, row) => acc + (row.lead_count || 0), 0);
+    const leadsCard = document.getElementById('leads-summary-card');
+    if (leadsStatus.length > 0) {
+        let html = `<div class="mb-2 stat-value text-success">${leadsCount}</div>`;
+        html += `<div class="stat-label mb-3">Количество лидов</div>`;
+        html += '<ul class="list-group mb-2">';
+        leadsStatus.forEach(row => {
+            html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>${row.status}</span>
+                <span class="badge bg-secondary rounded-pill">${row.lead_count}</span>
+            </li>`;
+        });
+        html += '</ul>';
+        leadsCard.innerHTML = html;
+    } else {
+        leadsCard.innerHTML = '<div class="text-muted">Нет лидов за сегодня</div>';
+    }
+    fadeInCard('leads-card');
+
+    // 3. Топ-5 товаров
+    const productsRes = await fetch(
+        `${SiteUrl}/mini/report/top-products`,
+        { headers: { 'accept': 'application/json', 'Authorization': 'Bearer ' + token } }
+    );
+    const products = await productsRes.json();
+    const productsCard = document.getElementById('products-summary-card');
+    if (products.length > 0) {
+        let html = '<ul class="list-group mb-2">';
+        products.slice(0, 5).forEach(row => {
+            html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>${row.product_name}</span>
+                <span class="badge bg-primary rounded-pill">${row.total_quantity}</span>
+            </li>`;
+        });
+        html += '</ul>';
+        productsCard.innerHTML = html;
+    } else {
+        productsCard.innerHTML = '<div class="text-muted">Нет данных</div>';
+    }
+    fadeInCard('products-card');
+
+    // 4. Клиенты
+    const clientsRes = await fetch(
+        `${SiteUrl}/mini/report/clients`,
+        { headers: { 'accept': 'application/json', 'Authorization': 'Bearer ' + token } }
+    );
+    const clients = await clientsRes.json();
+    const clientsCard = document.getElementById('clients-summary-card');
+    clientsCard.innerHTML = `<div class="mb-2 stat-value text-info">${clients.registered_clients}</div>
+        <div class="stat-label mb-2">Зарегистрированные</div>
+        <div class="mb-2 stat-value text-secondary">${clients.unregistered_clients}</div>
+        <div class="stat-label">Незарегистрированные</div>`;
+    fadeInCard('clients-card');
+
+    // Bootstrap tooltips
+    if (window.bootstrap) {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new window.bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+}
+
+window.addEventListener('DOMContentLoaded', loadMiniReport);
+</script>
 {% endblock %}

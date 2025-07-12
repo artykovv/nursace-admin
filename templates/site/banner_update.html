@@ -8,38 +8,180 @@
         <button id="save-carousel-images" class="btn btn-success">Сохранить</button>
     </div>
 </div>
+
+<!-- Модальное окно выбора ссылки -->
+<div class="modal fade" id="selectHrefModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Выберите, куда ведёт баннер</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs mb-3" id="hrefTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="product-tab" data-bs-toggle="tab" data-bs-target="#product-tab-pane" type="button" role="tab">Товар</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="category-tab" data-bs-toggle="tab" data-bs-target="#category-tab-pane" type="button" role="tab">Категория</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="custom-category-tab" data-bs-toggle="tab" data-bs-target="#custom-category-tab-pane" type="button" role="tab">Кастомная категория</button>
+          </li>
+        </ul>
+        <div class="tab-content" id="hrefTabContent">
+          <div class="tab-pane fade show active" id="product-tab-pane" role="tabpanel">
+            <input type="text" class="form-control mb-2" id="search-product" placeholder="Поиск товара...">
+            <div style="max-height:300px;overflow:auto;" id="product-list"></div>
+          </div>
+          <div class="tab-pane fade" id="category-tab-pane" role="tabpanel">
+            <input type="text" class="form-control mb-2" id="search-category" placeholder="Поиск категории...">
+            <div style="max-height:300px;overflow:auto;" id="category-list"></div>
+          </div>
+          <div class="tab-pane fade" id="custom-category-tab-pane" role="tabpanel">
+            <input type="text" class="form-control mb-2" id="search-custom-category" placeholder="Поиск кастомной категории...">
+            <div style="max-height:300px;overflow:auto;" id="custom-category-list"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="select-href-btn" onclick="selectHref()" disabled>Выбрать</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
-    .carousel-image-list { display: flex; flex-wrap: wrap; gap: 16px; }
+    .carousel-image-list {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        width: 100%;
+    }
     .carousel-image-card {
         border: 2px solid #eee;
-        border-radius: 8px;
-        padding: 8px;
-        width: 160px;
-        text-align: center;
+        border-radius: 12px;
+        padding: 14px 18px;
+        width: 100%;
+        min-height: 140px;
+        text-align: left;
         position: relative;
         background: #fafafa;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
         cursor: grab;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        overflow: hidden;
+        gap: 18px;
     }
     .carousel-image-card img {
-        max-width: 100%;
-        max-height: 120px;
-        border-radius: 4px;
-        margin-bottom: 8px;
+        width: 140px;
+        height: 100px;
+        border-radius: 8px;
+        object-fit: cover;
+        background: #f0f0f0;
+        flex-shrink: 0;
+        margin-bottom: 0;
     }
     .carousel-image-card .remove-btn {
         position: absolute;
-        top: 4px; right: 4px;
+        top: 8px; right: 8px;
         background: #dc3545;
         color: #fff;
         border: none;
         border-radius: 50%;
-        width: 24px; height: 24px;
-        font-size: 16px;
+        width: 32px; height: 32px;
+        font-size: 20px;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+        transition: background 0.15s;
+    }
+    .carousel-image-card .remove-btn:hover {
+        background: #b52a37;
+    }
+    .carousel-image-card .carousel-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 0;
+        min-width: 0;
+        gap: 8px;
+    }
+    .carousel-image-card .href-label {
+        background: #198754;
+        color: #fff;
+        border-radius: 6px;
+        font-size: 15px;
+        padding: 4px 12px;
+        max-width: 420px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-block;
+        box-sizing: border-box;
+    }
+    .carousel-image-card .carousel-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-start;
+        width: 100%;
+        box-sizing: border-box;
+        padding-bottom: 2px;
+    }
+    .carousel-image-card .carousel-action-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 15px;
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+        background: #fff;
+        color: #333;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        font-weight: 500;
+        min-width: 0;
+        max-width: 100%;
+        flex: 1 1 120px;
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .carousel-image-card .carousel-action-btn:hover {
+        background: #f1f3f5;
+        color: #0d6efd;
+        border-color: #b6d4fe;
+    }
+    .carousel-image-card .carousel-action-btn.danger {
+        background: #fff0f1;
+        color: #dc3545;
+        border-color: #f5c2c7;
+    }
+    .carousel-image-card .carousel-action-btn.danger:hover {
+        background: #f8d7da;
+        color: #a71d2a;
     }
     .add-carousel-image-btn {
-        margin-top: 16px;
+        min-height: 120px;
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 18px;
+        border-style: dashed;
+    }
+    .add-carousel-image-btn > div {
+        margin-bottom: 0;
     }
 </style>
 <script>
@@ -48,6 +190,10 @@ const carouselApiUrl = `${SiteUrl}/carousel/`;
 const PLACEHOLDER_IMAGE = "https://placehold.co/160x120";
 let carouselImages = [];
 let newCarouselImages = [];
+let currentHrefEditIdx = null;
+let productsCache = [];
+let categoriesCache = [];
+let customCategoriesCache = [];
 
 function getToken() {
     const match = document.cookie.match(/(?:^|; )Bearer=([^;]*)/);
@@ -71,16 +217,68 @@ async function fetchCarouselImages() {
     return await res.json();
 }
 
+async function fetchProducts() {
+    if (productsCache.length) return productsCache;
+    const res = await fetchWithAuth(`${SiteUrl}/products/`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    productsCache = data;
+    return data;
+}
+async function fetchCategories() {
+    if (categoriesCache.length) return categoriesCache;
+    const res = await fetchWithAuth(`${SiteUrl}/categories/`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    categoriesCache = data;
+    return data;
+}
+async function fetchCustomCategories() {
+    if (customCategoriesCache.length) return customCategoriesCache;
+    const res = await fetchWithAuth(`${SiteUrl}/custom-categories/`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    customCategoriesCache = data;
+    return data;
+}
+
 function renderCarouselImages() {
     const allImages = [...carouselImages, ...newCarouselImages];
     let html = `<div class="carousel-image-list" id="carousel-image-list">`;
     allImages.forEach((img, idx) => {
+        let hrefLabel = '', hrefName = '', hrefTooltip = '';
+        if (img.href && img._hrefObj) {
+            if (img.href.startsWith('/product?good_id=')) {
+                hrefLabel = 'Товар';
+                hrefName = img._hrefObj.fashion_name || '';
+                hrefTooltip = hrefName + (img._hrefObj.articul ? ' / ' + img._hrefObj.articul : '');
+            } else if (img.href.startsWith('/category?category=')) {
+                hrefLabel = 'Категория';
+                hrefName = img._hrefObj.category_name || '';
+                hrefTooltip = hrefName;
+            } else if (img.href.startsWith('/category?custom_category=')) {
+                hrefLabel = 'Каст. категория';
+                hrefName = img._hrefObj.category_name || '';
+                hrefTooltip = hrefName;
+            }
+        }
         html += `<div class="carousel-image-card" draggable="true" data-idx="${idx}">
             <img src="${img.src || PLACEHOLDER_IMAGE}" alt="image">
-            <button class="remove-btn" title="Удалить" type="button">&times;</button>
+            <button class="remove-btn" title="Удалить" type="button" data-remove-idx="${idx}">&times;</button>
+            <div class="carousel-content">
+                ${img.href ? `<span class="href-label" title="${hrefTooltip}">${hrefLabel}: ${hrefName}</span>` : ''}
+                <div class="carousel-actions">
+                    ${img.href ?
+                        `<button class="carousel-action-btn" type="button" title="Изменить ссылку" onclick="openHrefModal(${idx})"><i class='bi bi-pencil'></i>Изменить</button>
+                         <button class="carousel-action-btn danger" type="button" title="Удалить ссылку" onclick="removeHref(${idx})"><i class='bi bi-x-lg'></i>Удалить ссылку</button>`
+                        :
+                        `<button class="carousel-action-btn" type="button" onclick="openHrefModal(${idx})"><i class='bi bi-link-45deg'></i>Добавить ссылку</button>`
+                    }
+                </div>
+            </div>
         </div>`;
     });
-    html += `<div class="carousel-image-card add-carousel-image-btn" style="border-style:dashed;cursor:pointer;" id="add-carousel-image-btn">
+    html += `<div class="carousel-image-card add-carousel-image-btn" id="add-carousel-image-btn">
         <div style="font-size:32px;">+</div>
         <div style="font-size:14px;">Добавить</div>
         <input type="file" accept="image/*" style="display:none;" id="carousel-file-input">
@@ -93,57 +291,60 @@ function renderCarouselImages() {
 
 function addCarouselImageEventListeners() {
     // Удаление
-    document.querySelectorAll('.remove-btn').forEach((btn, idx) => {
-        btn.onclick = async (e) => {
-            e.stopPropagation();
-            const all = [...carouselImages, ...newCarouselImages];
-            const img = all[idx];
-            if (img.is_new) {
-                newCarouselImages = newCarouselImages.filter(n => n !== img);
-                renderCarouselImages();
-            } else {
-                // Удаляем с сервера
-                if (!confirm('Удалить изображение?')) return;
-                try {
-                    const res = await fetchWithAuth(`${carouselApiUrl}${img.id}`, {
-                        method: 'DELETE'
-                    });
-                    if (res.ok) {
-                        carouselImages = carouselImages.filter(i => i !== img);
-                        renderCarouselImages();
-                    } else {
+    document.querySelectorAll('.remove-btn').forEach((btn) => {
+        const idx = btn.getAttribute('data-remove-idx');
+        if (idx !== null) {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const all = [...carouselImages, ...newCarouselImages];
+                const img = all[idx];
+                if (img.is_new) {
+                    newCarouselImages = newCarouselImages.filter(n => n !== img);
+                    renderCarouselImages();
+                } else {
+                    if (!confirm('Удалить изображение?')) return;
+                    try {
+                        const res = await fetchWithAuth(`${carouselApiUrl}${img.id}`, {
+                            method: 'DELETE'
+                        });
+                        if (res.ok) {
+                            carouselImages = carouselImages.filter(i => i !== img);
+                            renderCarouselImages();
+                        } else {
+                            alert('Ошибка при удалении');
+                        }
+                    } catch {
                         alert('Ошибка при удалении');
                     }
-                } catch {
-                    alert('Ошибка при удалении');
                 }
-            }
-        };
+            };
+        }
     });
     // Добавить
     const addBtn = document.getElementById('add-carousel-image-btn');
     const fileInput = document.getElementById('carousel-file-input');
-    addBtn.onclick = () => fileInput.click();
-    fileInput.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const formData = new FormData();
-        formData.append('files', file);
-        try {
-            // Загрузка файла на сервер (можно заменить на свой endpoint)
-            const uploadRes = await fetchWithAuth(`${SiteUrl}/storage/upload`, { method: 'POST', body: formData });
-            const data = await uploadRes.json();
-            if (data.uploaded_urls && data.uploaded_urls.length > 0) {
-                newCarouselImages.push({ src: data.uploaded_urls[0], href: '', is_new: true });
-                renderCarouselImages();
-            } else {
+    if (addBtn && fileInput) {
+        addBtn.onclick = () => fileInput.click();
+        fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('files', file);
+            try {
+                const uploadRes = await fetchWithAuth(`${SiteUrl}/storage/upload`, { method: 'POST', body: formData });
+                const data = await uploadRes.json();
+                if (data.uploaded_urls && data.uploaded_urls.length > 0) {
+                    newCarouselImages.push({ src: data.uploaded_urls[0], href: '', is_new: true });
+                    renderCarouselImages();
+                } else {
+                    alert('Ошибка загрузки файла');
+                }
+            } catch {
                 alert('Ошибка загрузки файла');
             }
-        } catch {
-            alert('Ошибка загрузки файла');
-        }
-        fileInput.value = '';
-    };
+            fileInput.value = '';
+        };
+    }
 }
 
 function enableCarouselDragAndDrop() {
@@ -179,6 +380,98 @@ function enableCarouselDragAndDrop() {
     });
 }
 
+// Открыть модал для выбора ссылки
+window.openHrefModal = function(idx) {
+    currentHrefEditIdx = idx;
+    document.getElementById('search-product').value = '';
+    document.getElementById('search-category').value = '';
+    document.getElementById('search-custom-category').value = '';
+    renderProductList('');
+    renderCategoryList('');
+    renderCustomCategoryList('');
+    // Сброс выбора
+    window._selectedHrefType = null;
+    window._selectedHrefId = null;
+    window._selectedHrefObj = null;
+    updateSelectHrefBtn();
+    const modal = new bootstrap.Modal(document.getElementById('selectHrefModal'));
+    modal.show();
+};
+
+function updateSelectHrefBtn() {
+    const btn = document.getElementById('select-href-btn');
+    if (!btn) return;
+    btn.disabled = !(window._selectedHrefType && window._selectedHrefId);
+}
+
+async function renderProductList(search) {
+    const list = document.getElementById('product-list');
+    list.innerHTML = 'Загрузка...';
+    const products = await fetchProducts();
+    const filtered = products.filter(p => {
+        const name = (p.fashion_name || '').toLowerCase();
+        const art = (p.articul || '').toLowerCase();
+        return name.includes(search.toLowerCase()) || art.includes(search.toLowerCase());
+    });
+    list.innerHTML = filtered.map(p =>
+        `<label class="list-group-item list-group-item-action d-flex align-items-center gap-2" style="cursor:pointer;">
+            <input type="radio" name="href-radio" value="product-${p.good_id}" onchange="selectHrefRadio('product', ${p.good_id}, '${encodeURIComponent(JSON.stringify(p))}')">
+            <span>${p.fashion_name || ''} <span class="text-muted small">${p.articul || ''}</span></span>
+        </label>`
+    ).join('') || '<div class="text-muted">Нет результатов</div>';
+}
+async function renderCategoryList(search) {
+    const list = document.getElementById('category-list');
+    list.innerHTML = 'Загрузка...';
+    const cats = await fetchCategories();
+    const filtered = cats.filter(c => (c.category_name || '').toLowerCase().includes(search.toLowerCase()));
+    list.innerHTML = filtered.map(c =>
+        `<label class="list-group-item list-group-item-action d-flex align-items-center gap-2" style="cursor:pointer;">
+            <input type="radio" name="href-radio" value="category-${c.category_id}" onchange="selectHrefRadio('category', ${c.category_id}, '${encodeURIComponent(JSON.stringify(c))}')">
+            <span>${c.category_name || ''}</span>
+        </label>`
+    ).join('') || '<div class="text-muted">Нет результатов</div>';
+}
+async function renderCustomCategoryList(search) {
+    const list = document.getElementById('custom-category-list');
+    list.innerHTML = 'Загрузка...';
+    const cats = await fetchCustomCategories();
+    const filtered = cats.filter(c => (c.category_name || '').toLowerCase().includes(search.toLowerCase()));
+    list.innerHTML = filtered.map(c =>
+        `<label class="list-group-item list-group-item-action d-flex align-items-center gap-2" style="cursor:pointer;">
+            <input type="radio" name="href-radio" value="custom_category-${c.category_id}" onchange="selectHrefRadio('custom_category', ${c.category_id}, '${encodeURIComponent(JSON.stringify(c))}')">
+            <span>${c.category_name || ''}</span>
+        </label>`
+    ).join('') || '<div class="text-muted">Нет результатов</div>';
+}
+
+window.selectHrefRadio = function(type, id, objStr) {
+    window._selectedHrefType = type;
+    window._selectedHrefId = id;
+    window._selectedHrefObj = JSON.parse(decodeURIComponent(objStr));
+    updateSelectHrefBtn();
+};
+
+window.selectHref = function() {
+    if (!window._selectedHrefType || !window._selectedHrefId) return;
+    const all = [...carouselImages, ...newCarouselImages];
+    let href = '';
+    if (window._selectedHrefType === 'product') href = `/product?good_id=${window._selectedHrefId}`;
+    else if (window._selectedHrefType === 'category') href = `/category?category=${window._selectedHrefId}`;
+    else if (window._selectedHrefType === 'custom_category') href = `/category?custom_category=${window._selectedHrefId}`;
+    all[currentHrefEditIdx].href = href;
+    all[currentHrefEditIdx]._hrefObj = window._selectedHrefObj;
+    renderCarouselImages();
+    bootstrap.Modal.getInstance(document.getElementById('selectHrefModal')).hide();
+};
+
+window.removeHref = function(idx) {
+    const all = [...carouselImages, ...newCarouselImages];
+    all[idx].href = '';
+    all[idx]._hrefObj = undefined;
+    renderCarouselImages();
+};
+
 async function saveCarouselImages() {
     const all = [...carouselImages, ...newCarouselImages];
     if (all.length === 0) {
@@ -197,15 +490,51 @@ async function saveCarouselImages() {
             alert('Ошибка при добавлении изображения');
         }
     }
+    // Обновляем href для существующих изображений
+    for (const img of carouselImages) {
+        // Если href не пустой и отличается от исходного (или всегда обновлять)
+        try {
+            const res = await fetchWithAuth(`${carouselApiUrl}${img.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ href: img.href || '' })
+            });
+            if (!res.ok) throw new Error();
+        } catch {
+            alert('Ошибка при обновлении ссылки баннера');
+        }
+    }
     // TODO: если нужен порядок, можно реализовать PUT/PATCH
     window.location.reload();
 }
 
 document.getElementById('save-carousel-images').onclick = saveCarouselImages;
 
-fetchCarouselImages().then(list => {
+async function fillHrefObjForAll() {
+    // Заполнить _hrefObj для всех carouselImages
+    if (!carouselImages.length) return;
+    // Кэшируем списки
+    const [products, categories, customCategories] = await Promise.all([
+        fetchProducts(), fetchCategories(), fetchCustomCategories()
+    ]);
+    for (const img of carouselImages) {
+        if (!img.href) continue;
+        if (img.href.startsWith('/product?good_id=')) {
+            const id = Number(img.href.split('=')[1]);
+            img._hrefObj = products.find(p => p.good_id === id);
+        } else if (img.href.startsWith('/category?category=')) {
+            const id = Number(img.href.split('=')[1]);
+            img._hrefObj = categories.find(c => c.category_id === id);
+        } else if (img.href.startsWith('/category?custom_category=')) {
+            const id = Number(img.href.split('=')[1]);
+            img._hrefObj = customCategories.find(c => c.category_id === id);
+        }
+    }
+}
+
+fetchCarouselImages().then(async list => {
     carouselImages = list;
     newCarouselImages = [];
+    await fillHrefObjForAll();
     renderCarouselImages();
 }).catch(() => {
     carouselImages = [];

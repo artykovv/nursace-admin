@@ -7,14 +7,20 @@
                 <i class="bi bi-plus-circle me-2"></i> Добавить
             </a>
         </div>
-        <div class="row fw-bold text-secondary mb-2 px-3">
-            <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-id">Заказ <span id="sort-id-icon"></span></div>
-            <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-client">Клиент</div>
-            <div class="col-12 col-md-3" style="cursor:pointer;" id="sort-date">Дата <span id="sort-date-icon"></span></div>
-            <div class="col-12 col-md-3" style="cursor:pointer;" id="sort-status">Статус</div>
-            <div class="col-12 col-md-2" style="cursor:pointer;" id="sort-price">Итог <span id="sort-price-icon"></span></div>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th style="cursor:pointer;" id="sort-id">Заказ <span id="sort-id-icon"></span></th>
+                        <th style="cursor:pointer;" id="sort-client">Клиент</th>
+                        <th style="cursor:pointer;" id="sort-date">Дата <span id="sort-date-icon"></span></th>
+                        <th style="cursor:pointer;" id="sort-status">Статус</th>
+                        <th style="cursor:pointer;" id="sort-price">Итог <span id="sort-price-icon"></span></th>
+                    </tr>
+                </thead>
+                <tbody id="orders-list"></tbody>
+            </table>
         </div>
-        <div id="orders-list"></div>
     </div>
 
 <script>
@@ -47,22 +53,20 @@ function renderOrders(data, statusMap) {
 
     const list = document.getElementById('orders-list');
     if (!Array.isArray(sorted) || sorted.length === 0) {
-        list.innerHTML = '<div class="alert alert-info">Нет заказов</div>';
+        list.innerHTML = '<tr><td colspan="5"><div class="alert alert-info mb-0">Нет заказов</div></td></tr>';
         return;
     }
     list.innerHTML = sorted.map(order => {
         const statusObj = statusMap[order.status_id] || {};
         const statusText = statusObj.description || statusObj.name || order.status_id || '';
         return `
-            <div class="card mb-2 order-row px-3" style="cursor:pointer;" onclick="window.location='/orders/${order.id}'">
-                <div class="card-body row text-start align-items-center g-0 mb-0">
-                    <div class="col-12 col-md-2 mb-2 mb-md-0"><b>#${order.id}</b></div>
-                    <div class="col-12 col-md-2 mb-2 mb-md-0">${order.info?.first_name || ''} ${order.info?.last_name || ''}</div>
-                    <div class="col-12 col-md-3 mb-2 mb-md-0">${order.created_at ? new Date(order.created_at).toLocaleString() : ''}</div>
-                    <div class="col-12 col-md-3 mb-2 mb-md-0">${statusText}</div>
-                    <div class="col-12 col-md-2 mb-2 mb-md-0"><b>${order.total_price}</b></div>
-                </div>
-            </div>
+            <tr style="cursor:pointer;" onclick="window.location='/orders/${order.id}'">
+                <td><b>#${order.id}</b></td>
+                <td>${order.info?.first_name || ''} ${order.info?.last_name || ''}</td>
+                <td>${order.created_at ? new Date(order.created_at).toLocaleString() : ''}</td>
+                <td>${statusText}</td>
+                <td><b>${order.total_price}</b></td>
+            </tr>
         `;
     }).join('');
 }
@@ -92,7 +96,7 @@ Promise.all([
         renderOrders(orders, statusMap);
     };
 }).catch(() => {
-    document.getElementById('orders-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки заказов</div>';
+    document.getElementById('orders-list').innerHTML = '<tr><td colspan="5"><div class="alert alert-danger mb-0">Ошибка загрузки заказов</div></td></tr>';
 });
 </script>
 {% endblock %} 

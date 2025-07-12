@@ -1,7 +1,125 @@
 {% extends 'base.html' %}
 {% block content %}
-    <div class="container mt-4">
-        <h1>Отчет</h1>
-        <p>Здесь будет отчет.</p>
-    </div>
+<div class="container mt-4">
+    <h1>Отчет по заказам</h1>
+    <form id="report-form" class="row g-3 mb-4">
+        <div class="col-auto">
+            <label for="start_date" class="form-label">Дата начала</label>
+            <input type="date" class="form-control" id="start_date" required>
+        </div>
+        <div class="col-auto">
+            <label for="end_date" class="form-label">Дата конца</label>
+            <input type="date" class="form-control" id="end_date" required>
+        </div>
+        <div class="col-auto align-self-end">
+            <button type="submit" class="btn btn-primary">Показать отчет</button>
+        </div>
+    </form>
+
+    <h3>Сводка по дням</h3>
+    <table class="table" id="summary-table">
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Количество заказов</th>
+                <th>Сумма</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h3>Детали заказов</h3>
+    <table class="table" id="details-table">
+        <thead>
+            <tr>
+                <th>ID заказа</th>
+                <th>Клиент</th>
+                <th>Email</th>
+                <th>Сумма</th>
+                <th>Дата создания</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+const SiteUrl = "{{ site_url_and_port }}";
+const token = (document.cookie.match(/(?:^|; )Bearer=([^;]*)/)||[])[1] || '';
+
+// Устанавливаем сегодняшнюю дату по умолчанию
+window.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('start_date').value = today;
+    document.getElementById('end_date').value = today;
+});
+
+document.getElementById('report-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const start_date = document.getElementById('start_date').value;
+    const end_date = document.getElementById('end_date').value;
+
+    // Сводка по дням
+    const summaryRes = await fetch(
+        `${SiteUrl}/mini/report/report/?start_date=${start_date}&end_date=${end_date}&sort_by=date&sort_order=asc`,
+        {
+            headers: {
+                'accept': 'application/json',
+                'Authorization': 'Bearer ' + token
+            }
+        }
+    );
+    const summary = await summaryRes.json();
+
+    // Детали заказов
+    const detailsRes = await fetch(
+        `${SiteUrl}/report/order/details?start_date=${start_date}&end_date=${end_date}`,
+        {
+            headers: {
+                'accept': 'application/json',
+                'Authorization': 'Bearer ' + token
+            }
+        }
+    );
+    const details = await detailsRes.json();
+
+    // Заполняем таблицу сводки
+    const summaryTable = document.querySelector('#summary-table tbody');
+    summaryTable.innerHTML = '';
+    summary.forEach(row => {
+        summaryTable.innerHTML += `<tr>
+            <td>${row.date}</td>
+            <td>${row.orders_count}</td>
+            <td>${row.total_sum}</td>
+        </tr>`;
+    });
+
+    // Заполняем таблицу деталей
+    const detailsTable = document.querySelector('#details-table tbody');
+    detailsTable.innerHTML = '';
+    details.forEach(row => {
+        // Преобразуем дату в человекочитаемый формат
+        let createdAt = row.created_at;
+        if (createdAt) {
+            const d = new Date(createdAt);
+            if (!isNaN(d)) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const hh = String(d.getHours()).padStart(2, '0');
+                const min = String(d.getMinutes()).padStart(2, '0');
+                const ss = String(d.getSeconds()).padStart(2, '0');
+                createdAt = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+            }
+        }
+        detailsTable.innerHTML += `<tr>
+            <td>${row.order_id}</td>
+            <td>${row.client}</td>
+            <td>${row.email}</td>
+            <td>${row.total_price}</td>
+            <td>${createdAt}</td>
+        </tr>`;
+    });
+});
+</script>
 {% endblock %} 

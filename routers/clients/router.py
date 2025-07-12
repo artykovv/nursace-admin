@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from config.token import validate_token
 from dependencies.auth import get_auth_status
 from config.config import site_url_and_port
 from config.token import get_user_id_by_token
@@ -32,4 +31,11 @@ async def clients_root(
             "user_id": user_id,
             "current_page": "clients"
         }
-    ) 
+    )
+
+@router.get('/clients/orders.html', response_class=HTMLResponse)
+def client_orders_page(request: Request):
+    return templates.TemplateResponse('clients/orders.html', {
+        'request': request,
+        "site_url_and_port": site_url_and_port,
+    }) 
