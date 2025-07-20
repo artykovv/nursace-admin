@@ -3,13 +3,15 @@
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h1>Товары</h1>
-            <a href="#" class="btn btn-primary d-flex align-items-center">
-                <i class="bi bi-plus-circle me-2"></i> Добавить
-            </a>
         </div>
         <form class="mb-3 d-flex gap-2" id="product-search-form" onsubmit="return false;">
             <input type="text" id="product-search" class="form-control" placeholder="Поиск по названию, артикулу...">
             <button type="submit" class="btn btn-outline-primary">Найти</button>
+            <select id="product-limit" class="form-select w-auto ms-2">
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
         </form>
         <div class="table-responsive">
             <table class="table table-hover">
@@ -25,6 +27,9 @@
                 <tbody id="products-list"></tbody>
             </table>
         </div>
+        <div class="d-flex justify-content-center align-items-center mt-3" id="load-more-controls" style="display:none;">
+            <button class="btn btn-outline-primary" id="load-more-btn">Загрузить еще</button>
+        </div>
     </div>
 
     <script>
@@ -33,11 +38,22 @@
     let sortDir = 'desc';
     let lastProducts = [];
     let lastSearch = '';
+    let offset = 0;
+    let limit = 20;
+    let total = 1000;
+    let allProducts = [];
 
-    function renderProducts(products) {
-        lastProducts = products;
-        // сортировка
-        const sorted = [...products].sort((a, b) => {
+    function renderProducts(products, append = false) {
+        let newItems = products.items || products;
+        total = products.total || (Array.isArray(products) ? products.length : 0);
+        if (append) {
+            allProducts = allProducts.concat(newItems);
+        } else {
+            allProducts = newItems;
+        }
+        lastProducts = allProducts;
+        // сортировка (если нужно)
+        const sorted = [...allProducts].sort((a, b) => {
             let av, bv;
             if (sortField === 'id') {
                 av = a.good_id; bv = b.good_id;
@@ -62,41 +78,48 @@
         const list = document.getElementById('products-list');
         if (!Array.isArray(sorted) || sorted.length === 0) {
             list.innerHTML = '<tr><td colspan="5"><div class="alert alert-info mb-0">Нет товаров</div></td></tr>';
-            return;
+        } else {
+            list.innerHTML = sorted.map(product => {
+                const mainImg = (product.images || []).find(img => img.is_main) || (product.images || [])[0];
+                return `
+                    <tr style="cursor:pointer;" onclick="window.location='/products/${product.good_id}'">
+                        <td class="align-middle text-center" style="max-width:90px;">
+                            <div class="ratio ratio-1x1 w-100" style="max-width:90px;">
+                                ${mainImg ? `<img src="${mainImg.image_url}" class="object-fit-cover rounded" alt="${product.fashion_name || ''}" style="max-width:80px;max-height:80px;">` : '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Нет фото</div>'}
+                            </div>
+                        </td>
+                        <td class="align-middle">
+                            <div class="fw-bold">${product.fashion_name || ''}</div>
+                            <div class="text-muted small">Артикул: <b>${product.articul || ''}</b></div>
+                        </td>
+                        <td class="align-middle">${product.product_size || ''}</td>
+                        <td class="align-middle">${product.warehouse_quantity || 0}</td>
+                        <td class="align-middle text-end">
+                            <span class="fw-bold">${product.retail_price_with_discount && product.retail_price_with_discount != product.retail_price ? `<span class='text-danger'>${product.retail_price_with_discount}</span> <span class='text-decoration-line-through text-muted small ms-1'>${product.retail_price}</span>` : product.retail_price}</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
-        list.innerHTML = sorted.map(product => {
-            const mainImg = (product.images || []).find(img => img.is_main) || (product.images || [])[0];
-            return `
-                <tr style="cursor:pointer;" onclick="window.location='/products/${product.good_id}'">
-                    <td class="align-middle text-center" style="max-width:90px;">
-                        <div class="ratio ratio-1x1 w-100" style="max-width:90px;">
-                            ${mainImg ? `<img src="${mainImg.image_url}" class="object-fit-cover rounded" alt="${product.fashion_name || ''}" style="max-width:80px;max-height:80px;">` : '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Нет фото</div>'}
-                        </div>
-                    </td>
-                    <td class="align-middle">
-                        <div class="fw-bold">${product.fashion_name || ''}</div>
-                        <div class="text-muted small">Артикул: <b>${product.articul || ''}</b></div>
-                    </td>
-                    <td class="align-middle">${product.product_size || ''}</td>
-                    <td class="align-middle">${product.warehouse_quantity || 0}</td>
-                    <td class="align-middle text-end">
-                        <span class="fw-bold">${product.retail_price_with_discount && product.retail_price_with_discount != product.retail_price ? `<span class='text-danger'>${product.retail_price_with_discount}</span> <span class='text-decoration-line-through text-muted small ms-1'>${product.retail_price}</span>` : product.retail_price}</span>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+        // Кнопка "Загрузить еще"
+        const loadMore = document.getElementById('load-more-controls');
+        if (offset + limit < total) {
+            loadMore.style.display = '';
+        } else {
+            loadMore.style.display = 'none';
+        }
     }
 
-    function fetchProducts(search = '') {
+    function fetchProducts(search = '', append = false) {
         lastSearch = search;
-        let url = `${SiteUrlAndPort}/products/`;
+        let url = `${SiteUrlAndPort}/products/?limit=${limit}&offset=${offset}`;
         if (search) {
-            url += `?search=${encodeURIComponent(search)}`;
+            url += `&search=${encodeURIComponent(search)}`;
         }
         fetch(url)
             .then(res => res.json())
             .then(products => {
-                renderProducts(products);
+                renderProducts(products, append);
             })
             .catch(() => {
                 document.getElementById('products-list').innerHTML = '<tr><td colspan="5"><div class="alert alert-danger mb-0">Ошибка загрузки товаров</div></td></tr>';
@@ -122,14 +145,32 @@
         };
         document.getElementById('product-search-form').addEventListener('submit', function(e) {
             e.preventDefault();
+            offset = 0;
+            allProducts = [];
             fetchProducts(document.getElementById('product-search').value.trim());
         });
         document.getElementById('product-search').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
+                offset = 0;
+                allProducts = [];
                 fetchProducts(e.target.value.trim());
             }
         });
+        document.getElementById('product-limit').addEventListener('change', function(e) {
+            limit = parseInt(e.target.value, 10);
+            offset = 0;
+            allProducts = [];
+            fetchProducts(lastSearch);
+        });
+        // Кнопка Загрузить еще
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        if (loadMoreBtn) {
+            loadMoreBtn.onclick = function() {
+                offset += limit;
+                fetchProducts(lastSearch, true);
+            };
+        }
     });
     </script>
 {% endblock %} 

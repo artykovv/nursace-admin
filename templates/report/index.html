@@ -61,7 +61,7 @@ document.getElementById('report-form').addEventListener('submit', async function
 
     // Сводка по дням
     const summaryRes = await fetch(
-        `${SiteUrl}/mini/report/report/?start_date=${start_date}&end_date=${end_date}&sort_by=date&sort_order=asc`,
+        `${SiteUrl}/mini/report/report?start_date=${start_date}&end_date=${end_date}&sort_by=date&sort_order=asc`,
         {
             headers: {
                 'accept': 'application/json',
