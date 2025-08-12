@@ -1,0 +1,554 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include 'components/mini_header.html' %}
+    <div class="container mt-4">
+        <h1>Скидки</h1>
+        <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createDiscountModal">Добавить скидку</button>
+        <table class="table" id="discounts-table">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Описание</th>
+                    <th>Скидка (%)</th>
+                    <th>Дата начала</th>
+                    <th>Дата окончания</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Create Discount Modal -->
+    <div class="modal fade" id="createDiscountModal" tabindex="-1" aria-labelledby="createDiscountModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createDiscountModalLabel">Новая скидка</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createDiscountForm">
+                        <div class="mb-3">
+                            <label for="createName" class="form-label">Название</label>
+                            <input type="text" class="form-control" id="createName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="createDescription" class="form-label">Описание</label>
+                            <textarea class="form-control" id="createDescription" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="createDiscountPercent" class="form-label">Скидка (%)</label>
+                            <input type="number" class="form-control" id="createDiscountPercent" required min="0" max="100">
+                        </div>
+                        <div class="mb-3">
+                            <label for="createStartDate" class="form-label">Дата начала</label>
+                            <input type="datetime-local" class="form-control" id="createStartDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="createEndDate" class="form-label">Дата окончания</label>
+                            <input type="datetime-local" class="form-control" id="createEndDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="createIsActive" checked>
+                                <label class="form-check-label" for="createIsActive">Активна</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="button" class="btn btn-primary" onclick="createDiscount()">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Discount Modal -->
+    <div class="modal fade" id="editDiscountModal" tabindex="-1" aria-labelledby="editDiscountModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editDiscountModalLabel">Редактировать скидку</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editDiscountForm">
+                        <input type="hidden" id="editDiscountId">
+                        <div class="mb-3">
+                            <label for="editName" class="form-label">Название</label>
+                            <input type="text" class="form-control" id="editName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDescription" class="form-label">Описание</label>
+                            <textarea class="form-control" id="editDescription" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDiscountPercent" class="form-label">Скидка (%)</label>
+                            <input type="number" class="form-control" id="editDiscountPercent" required min="0" max="100">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editStartDate" class="form-label">Дата начала</label>
+                            <input type="datetime-local" class="form-control" id="editStartDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editEndDate" class="form-label">Дата окончания</label>
+                            <input type="datetime-local" class="form-control" id="editEndDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editIsActive">
+                                <label class="form-check-label" for="editIsActive">Активна</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="button" class="btn btn-primary" onclick="updateDiscount()">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteDiscountModal" tabindex="-1" aria-labelledby="deleteDiscountModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteDiscountModalLabel">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Вы уверены, что хотите удалить эту скидку?
+                    <input type="hidden" id="deleteDiscountId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteDiscount()">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Management Modal -->
+    <div class="modal fade" id="productsModal" tabindex="-1" aria-labelledby="productsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productsModalLabel">Товары скидки</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5>Товары в скидке</h5>
+                        <button class="btn btn-primary" onclick="openAddProductsModal()">Добавить товары</button>
+                    </div>
+                    <div class="row fw-bold text-secondary mb-2 px-3">
+                        <div class="col-12 col-md-2">Фото</div>
+                        <div class="col-12 col-md-4">Название</div>
+                        <div class="col-6 col-md-2">Размер</div>
+                        <div class="col-6 col-md-2">В наличии</div>
+                        <div class="col-12 col-md-2 text-end">Цена</div>
+                    </div>
+                    <div id="discount-products-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Products Modal -->
+    <div class="modal fade" id="addProductsModal" tabindex="-1" aria-labelledby="addProductsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addProductsModalLabel">Добавить товары в скидку</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <input type="text" id="searchInputModal" class="form-control" placeholder="Поиск по названию или артикулу...">
+                        <button class="btn btn-outline-primary" id="searchButtonModal" type="button">Поиск</button>
+                    </div>
+                    <div id="all-products-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const SiteUrl = "{{ site_url_and_port }}";
+    let currentDiscountId = null;
+    let discountProducts = [];
+    let availableProductsCache = [];
+    let otherDiscountProductIds = new Set(); // товары, уже участвующие в других скидках
+
+    // Helper function to format date to YYYY-MM-DD HH:MM:SS
+    function formatDateForAPI(dateString) {
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = '00';
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    async function fetchDiscounts() {
+        try {
+            const res = await fetch(`${SiteUrl}/discounts/`, {
+                headers: {
+                    'accept': 'application/json'
+                }
+            });
+            const discounts = await res.json();
+            const tbody = document.querySelector('#discounts-table tbody');
+            tbody.innerHTML = '';
+            discounts.forEach(discount => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${discount.name}</td>
+                        <td>${discount.description}</td>
+                        <td>${discount.discount_percent}</td>
+                        <td>${new Date(discount.start_date).toLocaleString('ru-RU')}</td>
+                        <td>${new Date(discount.end_date).toLocaleString('ru-RU')}</td>
+                        <td>${discount.is_active ? 'Активна' : 'Неактивна'}</td>
+                        <td>
+                            <button class="btn btn-primary" onclick='editDiscount(${JSON.stringify(discount)})'>Редактировать</button>
+                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteDiscountModal" onclick="setDeleteDiscountId(${discount.id})">Удалить</button>
+                            <button class="btn btn-info" onclick="openProductsModal(${discount.id})">Товары</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } catch (error) {
+            console.error('Error fetching discounts:', error);
+        }
+    }
+
+    // Собираем список товаров, которые уже находятся в других скидках (кроме текущей)
+    async function buildOtherDiscountsIndex() {
+        otherDiscountProductIds = new Set();
+        try {
+            const res = await fetch(`${SiteUrl}/discounts/`, { headers: { 'accept': 'application/json' } });
+            const all = await res.json();
+            const others = Array.isArray(all) ? all.filter(d => d.id !== currentDiscountId) : [];
+            for (const d of others) {
+                try {
+                    const r = await fetch(`${SiteUrl}/discounts/${d.id}/products`, { headers: { 'accept': 'application/json' } });
+                    const prods = await r.json();
+                    (prods || []).forEach(p => { if (p && typeof p.good_id !== 'undefined') otherDiscountProductIds.add(p.good_id); });
+                } catch (e) { /* ignore single discount errors */ }
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    async function createDiscount() {
+        try {
+            const discount = {
+                name: document.getElementById('createName').value,
+                description: document.getElementById('createDescription').value,
+                discount_percent: parseInt(document.getElementById('createDiscountPercent').value),
+                start_date: formatDateForAPI(document.getElementById('createStartDate').value),
+                end_date: formatDateForAPI(document.getElementById('createEndDate').value),
+                is_active: document.getElementById('createIsActive').checked
+            };
+
+            const res = await fetch(`${SiteUrl}/discounts/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'accept': 'application/json'
+                },
+                body: JSON.stringify(discount)
+            });
+
+            if (res.ok) {
+                document.getElementById('createDiscountForm').reset();
+                document.getElementById('createIsActive').checked = true;
+                bootstrap.Modal.getInstance(document.getElementById('createDiscountModal')).hide();
+                fetchDiscounts();
+            } else {
+                console.error('Error creating discount:', await res.text());
+            }
+        } catch (error) {
+            console.error('Error creating discount:', error);
+        }
+    }
+
+    function editDiscount(discount) {
+        document.getElementById('editDiscountId').value = discount.id;
+        document.getElementById('editName').value = discount.name;
+        document.getElementById('editDescription').value = discount.description;
+        document.getElementById('editDiscountPercent').value = discount.discount_percent;
+        const startDate = discount.start_date.replace(' ', 'T');
+        const endDate = discount.end_date.replace(' ', 'T');
+        document.getElementById('editStartDate').value = startDate;
+        document.getElementById('editEndDate').value = endDate;
+        document.getElementById('editIsActive').checked = discount.is_active;
+        new bootstrap.Modal(document.getElementById('editDiscountModal')).show();
+    }
+
+    async function updateDiscount() {
+        try {
+            const discount = {
+                id: document.getElementById('editDiscountId').value,
+                name: document.getElementById('editName').value,
+                description: document.getElementById('editDescription').value,
+                discount_percent: parseInt(document.getElementById('editDiscountPercent').value),
+                start_date: formatDateForAPI(document.getElementById('editStartDate').value),
+                end_date: formatDateForAPI(document.getElementById('editEndDate').value),
+                is_active: document.getElementById('editIsActive').checked
+            };
+
+            const res = await fetch(`${SiteUrl}/discounts/${discount.id}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'accept': 'application/json'
+                },
+                body: JSON.stringify(discount)
+            });
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('editDiscountModal')).hide();
+                fetchDiscounts();
+            } else {
+                console.error('Error updating discount:', await res.text());
+            }
+        } catch (error) {
+            console.error('Error updating discount:', error);
+        }
+    }
+
+    function setDeleteDiscountId(id) {
+        document.getElementById('deleteDiscountId').value = id;
+    }
+
+    async function deleteDiscount() {
+        try {
+            const id = document.getElementById('deleteDiscountId').value;
+            const res = await fetch(`${SiteUrl}/discounts/${id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'accept': 'application/json'
+                }
+            });
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('deleteDiscountModal')).hide();
+                fetchDiscounts();
+            } else {
+                console.error('Error deleting discount:', await res.text());
+            }
+        } catch (error) {
+            console.error('Error deleting discount:', error);
+        }
+    }
+
+    // Product Management Functions
+    function openProductsModal(discountId) {
+        currentDiscountId = discountId;
+        const modal = new bootstrap.Modal(document.getElementById('productsModal'));
+        modal.show();
+        fetchDiscountProducts(discountId);
+    }
+
+    async function fetchDiscountProducts(discountId) {
+        try {
+            const res = await fetch(`${SiteUrl}/discounts/${discountId}/products`, {
+                headers: {
+                    'accept': 'application/json'
+                }
+            });
+            discountProducts = await res.json();
+            renderDiscountProducts(discountProducts);
+        } catch (error) {
+            console.error('Error fetching discount products:', error);
+            document.getElementById('discount-products-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки товаров</div>';
+        }
+    }
+
+    function renderDiscountProducts(products) {
+        const list = document.getElementById('discount-products-list');
+        if (!Array.isArray(products) || products.length === 0) {
+            list.innerHTML = '<div class="alert alert-info">Нет товаров в скидке</div>';
+            return;
+        }
+        list.innerHTML = products.map(product => {
+            return `
+                <div class="card mb-2 product-row px-3">
+                    <div class="card-body row align-items-start g-0 mb-0">
+                        <div class="col-12 col-md-2 d-flex align-items-center justify-content-center mb-2 mb-md-0">
+                            <div class="ratio ratio-1x1 w-100" style="max-width:90px;">
+                                <div class="d-flex align-items-center justify-content-center h-100 text-muted">Нет фото</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4 mb-2 mb-md-0">
+                            <div class="fw-bold">${product.good_name || ''}</div>
+                            <div class="text-muted small">Артикул: <b>${product.articul || ''}</b></div>
+                        </div>
+                        <div class="col-6 col-md-2 mb-2 mb-md-0">Размер: <b>${product.product_size || 'Не указан'}</b></div>
+                        <div class="col-6 col-md-2 mb-2 mb-md-0">В наличии: <b>${product.warehouse_quantity || 0}</b></div>
+                        <div class="col-12 col-md-2 text-end">
+                            <span class="fw-bold">${product.retail_price_with_discount && product.retail_price_with_discount != product.retail_price ? `<span class='text-danger'>${product.retail_price_with_discount}</span> <span class='text-decoration-line-through text-muted small ms-1'>${product.retail_price}</span>` : product.retail_price}</span>
+                            <button class="btn btn-danger btn-sm ms-2" onclick="removeProductFromDiscount(${product.good_id})">-</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function openAddProductsModal() {
+        const modal = new bootstrap.Modal(document.getElementById('addProductsModal'));
+        modal.show();
+        await buildOtherDiscountsIndex();
+        fetchAllProducts();
+    }
+
+    async function fetchAllProducts() {
+        try {
+            const res = await fetch(`${SiteUrl}/products/`, {
+                headers: {
+                    'accept': 'application/json'
+                }
+            });
+            const allProducts = await res.json();
+            const discountProductIds = new Set(discountProducts.map(p => p.good_id));
+            availableProductsCache = allProducts.filter(p => !discountProductIds.has(p.good_id));
+            renderAllProductsModal(availableProductsCache);
+
+            const inputEl = document.getElementById('searchInputModal');
+            if (inputEl) {
+                inputEl.oninput = () => renderAllProductsModal(availableProductsCache);
+                inputEl.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); searchProducts(); } };
+            }
+            const btn = document.getElementById('searchButtonModal');
+            if (btn) {
+                btn.onclick = () => searchProducts();
+            }
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            document.getElementById('all-products-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки товаров</div>';
+        }
+    }
+
+    async function searchProducts() {
+        try {
+            const inputEl = document.getElementById('searchInputModal');
+            const search = inputEl ? inputEl.value.trim() : '';
+            const url = search ? `${SiteUrl}/products/?search=${encodeURIComponent(search)}` : `${SiteUrl}/products/`;
+            const res = await fetch(url, {
+                headers: {
+                    'accept': 'application/json'
+                }
+            });
+            const allProducts = await res.json();
+            const discountProductIds = new Set(discountProducts.map(p => p.good_id));
+            availableProductsCache = allProducts.filter(p => !discountProductIds.has(p.good_id));
+            renderAllProductsModal(availableProductsCache);
+        } catch (error) {
+            console.error('Error searching products:', error);
+            document.getElementById('all-products-list').innerHTML = '<div class="alert alert-danger">Ошибка загрузки товаров</div>';
+        }
+    }
+
+    function renderAllProductsModal(products) {
+        const search = document.getElementById('searchInputModal').value.trim().toLowerCase();
+        const filtered = products.filter(product => {
+            const name = (product.good_name || '').toLowerCase();
+            const articul = (product.articul || '').toLowerCase();
+            return name.includes(search) || articul.includes(search);
+        });
+        const list = document.getElementById('all-products-list');
+        if (!Array.isArray(filtered) || filtered.length === 0) {
+            list.innerHTML = '<div class="alert alert-info">Нет доступных товаров</div>';
+            return;
+        }
+        list.innerHTML = filtered.map(product => {
+            const inOtherDiscount = otherDiscountProductIds.has(product.good_id);
+             return `
+                 <div class="card mb-2 product-row px-3">
+                     <div class="card-body row align-items-start g-0 mb-0">
+                         <div class="col-12 col-md-2 d-flex align-items-center justify-content-center mb-2 mb-md-0">
+                             <div class="ratio ratio-1x1 w-100" style="max-width:90px;">
+                                 <div class="d-flex align-items-center justify-content-center h-100 text-muted">Нет фото</div>
+                             </div>
+                         </div>
+                         <div class="col-12 col-md-4 mb-2 mb-md-0">
+                             <div class="fw-bold">${product.good_name || ''}</div>
+                             <div class="text-muted small">Артикул: <b>${product.articul || ''}</b></div>
+                         </div>
+                         <div class="col-12 col-md-2 text-end">
+                            <span class="fw-bold">${product.retail_price_with_discount && product.retail_price_with_discount != product.retail_price ? `<span class='text-danger'>${product.retail_price_with_discount}</span> <span class='text-decoration-line-through text-muted small ms-1'>${product.retail_price}</span>` : product.retail_price}</span>
+                            ${inOtherDiscount
+                                ? `<button class='btn btn-secondary btn-sm ms-2' disabled title='Товар уже участвует в другой скидке'>В скидке</button>`
+                                : `<button class='btn btn-success btn-sm ms-2' onclick='addProductToDiscount(${product.good_id})'>+</button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function addProductToDiscount(productId) {
+        if (otherDiscountProductIds.has(productId)) {
+            alert('Этот товар уже участвует в другой скидке');
+            return;
+        }
+        try {
+            const res = await fetch(`${SiteUrl}/discounts/${currentDiscountId}/products`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'accept': 'application/json'
+                },
+                body: JSON.stringify({ product_ids: [productId] })
+            });
+            if (res.ok) {
+                alert('Товар добавлен в скидку');
+                fetchDiscountProducts(currentDiscountId);
+                bootstrap.Modal.getInstance(document.getElementById('addProductsModal')).hide();
+            } else {
+                console.error('Error adding product to discount:', await res.text());
+                alert('Ошибка при добавлении товара');
+            }
+        } catch (error) {
+            console.error('Error adding product to discount:', error);
+            alert('Ошибка при добавлении товара');
+        }
+    }
+
+    async function removeProductFromDiscount(productId) {
+        try {
+            const res = await fetch(`${SiteUrl}/discounts/${currentDiscountId}/products`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'accept': 'application/json'
+                },
+                body: JSON.stringify({ product_ids: [productId] })
+            });
+            if (res.ok) {
+                alert('Товар удален из скидки');
+                fetchDiscountProducts(currentDiscountId);
+            } else {
+                console.error('Error removing product from discount:', await res.text());
+                alert('Ошибка при удалении товара');
+            }
+        } catch (error) {
+            console.error('Error removing product from discount:', error);
+            alert('Ошибка при удалении товара');
+        }
+    }
+
+    fetchDiscounts();
+</script>
+{% endblock %}

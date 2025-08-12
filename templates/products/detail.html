@@ -50,6 +50,37 @@
     .old_price.visible {
         visibility: visible;
     }
+    .swatch {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        vertical-align: middle;
+        margin-right: 8px;
+    }
+    .modal-colors-list, .modal-discounts-list {
+        max-height: 280px;
+        overflow: auto;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 6px;
+    }
+    .modal-color-item, .modal-discount-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .modal-color-item:hover, .modal-discount-item:hover {
+        background: #f7f7f7;
+    }
+    .modal-color-item.selected, .modal-discount-item.selected {
+        background: #e8f0fe;
+        outline: 1px solid #c7dafc;
+    }
 </style>
 
 <div class="container">
@@ -86,27 +117,127 @@
                     <tr><th>Коллекция</th><td id="product-collection">—</td></tr>
                     <tr><th>Сезон</th><td id="product-season">—</td></tr>
                     <tr><th>Пол</th><td id="product-sex">—</td></tr>
-                    <tr><th>Цвет</th><td id="product-color">—</td></tr>
+                    <tr><th>Цвет</th><td><span id="product-color-swatch" class="swatch"></span><span id="product-color">—</span></td></tr>
                     <tr><th>Материал</th><td id="product-material">—</td></tr>
                     <tr><th>Размер</th><td id="product-size">—</td></tr>
                     <tr><th>Описание</th><td id="product-description">—</td></tr>
                     <tr><th>Наличие</th><td id="product-quantity">—</td></tr>
                 </table>
-                <div class="mt-4 text-center">
-                    <a href="/products/{{ product_id }}/info" class="btn btn-warning w-100" style="display:none;">Изменить</a>
+                <div class="mt-3 d-flex gap-2 justify-content-end">
+                    <button id="openSelectColorModalBtn" type="button" class="btn btn-outline-primary">Изменить цвет…</button>
+                    <button id="openSelectDiscountModalBtn" type="button" class="btn btn-outline-primary">Изменить скидку…</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Select/Create Color Modal -->
+<div class="modal fade" id="selectColorModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Выбор цвета</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+            <input id="modalColorSearch" type="text" class="form-control" placeholder="Поиск по названию цвета...">
+        </div>
+        <div id="modalColorsList" class="modal-colors-list"></div>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <button id="modalOpenEditBtn" type="button" class="btn btn-outline-secondary" disabled>Изменить</button>
+            <button id="modalOpenCreateBtn" type="button" class="btn btn-success">+</button>
+        </div>
+        <hr/>
+        <div id="modalCreateSection" class="row g-2 align-items-center mb-2" style="display:none;">
+            <div class="col-12 col-md-7">
+                <input id="modalNewColorName" type="text" class="form-control" placeholder="Название нового цвета">
+            </div>
+            <div class="col-6 col-md-3">
+                <input id="modalNewColorHex" type="color" class="form-control form-control-color" value="#000000" title="Выберите цвет">
+            </div>
+            <div class="">
+                <button id="modalCreateAndSelectBtn" type="button" class="btn btn-success w-100">Создать</button>
+            </div>
+        </div>
+        <hr/>
+        <div class="mb-2 fw-semibold">Редактировать выбранный</div>
+        <div id="modalEditSection" class="row g-2 align-items-center" style="display:none;">
+            <div class="col-12 col-md-7">
+                <input id="modalEditColorName" type="text" class="form-control" placeholder="Название цвета" disabled>
+            </div>
+            <div class="col-6 col-md-3">
+                <input id="modalEditColorHex" type="color" class="form-control form-control-color" value="#000000" title="Цвет" disabled>
+            </div>
+            <div>
+                <div class="">
+                    <button id="modalEditColorSaveBtn" type="button" class="btn btn-primary w-100" disabled>Сохранить</button>
+                </div>
+                <div class="">
+                    <button id="modalEditColorDeleteBtn" type="button" class="btn btn-outline-danger btn-sm w-100 mt-2">Удалить цвет</button>
+                </div>
+            </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="modalClearColorBtn">Очистить</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="modalSaveColorBtn" disabled>Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Select Discount Modal -->
+<div class="modal fade" id="selectDiscountModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Выбор скидки</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+            <input id="modalDiscountSearch" type="text" class="form-control" placeholder="Поиск по названию скидки...">
+        </div>
+        <div id="modalDiscountsList" class="modal-discounts-list"></div>
+        <div class="form-text mt-2">Выберите одну скидку. Товар может быть только в одной скидке одновременно.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="modalClearDiscountBtn">Очистить</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="modalSaveDiscountBtn" disabled>Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
     const SiteUrl = "{{ site_url_and_port }}";
     let ProductID = "{{product_id}}";
     const PLACEHOLDER_IMAGE = "https://placehold.co/1000x1000";
+    let productHasDiscount = false;
+    let colorsCache = [];
+    let discountsCache = [];
+    let currentProductColorId = null;
+    let currentProductDiscountId = null;
+    let modalSelectedColorId = null;
+    let modalSelectedDiscountId = null;
+
+    function getValidHexOrDefault(hex, def = '#000000') {
+        if (!hex || typeof hex !== 'string') return def;
+        let h = hex.trim();
+        if (!h.startsWith('#')) h = '#' + h;
+        if (h.length === 4) {
+            h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
+        }
+        if (/^#([0-9a-fA-F]{6})$/.test(h)) return h.toUpperCase();
+        return def;
+    }
 
     async function fetchJSON(url) {
-        const response = await fetch(url);
+        const response = await fetch(url, { headers: { 'accept': 'application/json' } });
         if (!response.ok) throw new Error(`Failed to fetch ${url}`);
         return response.json();
     }
@@ -117,6 +248,14 @@
             return null;
         }
     }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return undefined;
+    }
+
     function setMetaTags(product) {
         if (product.fashion_name) {
             document.title = product.fashion_name;
@@ -169,17 +308,19 @@
         const discountPercentage = hasDiscount 
             ? Math.round(((product.retail_price - product.retail_price_with_discount) / product.retail_price) * 100)
             : 0;
+        productHasDiscount = !!hasDiscount;
         if (hasDiscount) {
             discountBadge.classList.add('visible');
             discountBadge.textContent = `-${discountPercentage}%`;
             oldPrice.classList.add('visible');
-            oldPrice.textContent = product.retail_price + ' сом';
-            newPrice.textContent = product.retail_price_with_discount + ' сом';
+            oldPrice.textContent = product.retail_price_with_discount + ' сом';
+            newPrice.textContent = product.retail_price + ' сом';
         } else {
             discountBadge.classList.remove('visible');
             oldPrice.classList.remove('visible');
             newPrice.textContent = product.retail_price + ' сом';
         }
+        currentProductColorId = product.color_id || null;
     }
     async function loadProductDetails(productId) {
         try {
@@ -201,7 +342,10 @@
             document.getElementById("product-collection").textContent = collection?.collection_name || "—";
             document.getElementById("product-season").textContent = season?.season_name || "—";
             document.getElementById("product-sex").textContent = sex?.sex_name || "—";
-            document.getElementById("product-color").textContent = product.color?.color_name || color?.color_name || "—";
+            const colorName = color?.color_name || "—";
+            document.getElementById("product-color").textContent = colorName;
+            const swatch = document.getElementById('product-color-swatch');
+            if (swatch) swatch.style.background = getValidHexOrDefault(color?.color_hex || '');
             document.getElementById("product-material").textContent = material?.material_name || "—";
             document.getElementById("product-size").textContent = product.product_size || "—";
             document.getElementById("product-description").textContent = product.description || "—";
@@ -221,8 +365,372 @@
             });
         }
     }
+
+    // Colors: list/search/create
+    function renderModalColors(filter = '') {
+        const list = document.getElementById('modalColorsList');
+        const saveBtn = document.getElementById('modalSaveColorBtn');
+        const editBtn = document.getElementById('modalOpenEditBtn');
+        if (!list) return;
+        const search = filter.trim().toLowerCase();
+        const items = colorsCache.filter(c => !search || (c.color_name || '').toLowerCase().includes(search));
+        if (items.length === 0) {
+            list.innerHTML = '<div class="text-muted">Нет цветов</div>';
+            saveBtn.disabled = (modalSelectedColorId === currentProductColorId);
+            if (editBtn) editBtn.disabled = true;
+            updateEditSelectedColorSection();
+            return;
+        }
+        list.innerHTML = items.map(c => {
+            const hex = getValidHexOrDefault(c.color_hex || '');
+            const selectedClass = (modalSelectedColorId === c.color_id) ? 'selected' : '';
+            return `
+                <div class="modal-color-item ${selectedClass}" data-id="${c.color_id}">
+                    <div>
+                        <span class="swatch" style="background:${hex}"></span>
+                        <span>${c.color_name}</span>
+                    </div>
+                    ${modalSelectedColorId === c.color_id ? '<span class="badge bg-primary">Выбрано</span>' : ''}
+                </div>
+            `;
+        }).join('');
+        Array.from(list.querySelectorAll('.modal-color-item')).forEach(el => {
+            el.onclick = () => {
+                const id = parseInt(el.getAttribute('data-id'), 10);
+                modalSelectedColorId = id;
+                renderModalColors(document.getElementById('modalColorSearch').value || '');
+            };
+        });
+        saveBtn.disabled = (modalSelectedColorId === currentProductColorId);
+        if (editBtn) editBtn.disabled = !modalSelectedColorId;
+        updateEditSelectedColorSection();
+    }
+
+    function updateEditSelectedColorSection() {
+        const nameEl = document.getElementById('modalEditColorName');
+        const hexEl = document.getElementById('modalEditColorHex');
+        const saveEl = document.getElementById('modalEditColorSaveBtn');
+        const delEl = document.getElementById('modalEditColorDeleteBtn');
+        const selected = colorsCache.find(c => c.color_id === modalSelectedColorId);
+        const enabled = !!selected;
+        nameEl.disabled = !enabled;
+        hexEl.disabled = !enabled;
+        saveEl.disabled = !enabled;
+        delEl.disabled = !enabled;
+        if (selected) {
+            nameEl.value = selected.color_name || '';
+            hexEl.value = getValidHexOrDefault(selected.color_hex || '#000000');
+        } else {
+            nameEl.value = '';
+            hexEl.value = '#000000';
+        }
+    }
+
+    function openSelectColorModal() {
+        const m = new bootstrap.Modal(document.getElementById('selectColorModal'));
+        modalSelectedColorId = currentProductColorId;
+        const searchEl = document.getElementById('modalColorSearch');
+        const createSec = document.getElementById('modalCreateSection');
+        const editSec = document.getElementById('modalEditSection');
+        if (searchEl) searchEl.value = '';
+        if (createSec) createSec.style.display = 'none';
+        if (editSec) editSec.style.display = 'none';
+        renderModalColors('');
+        m.show();
+    }
+
+    function openCreateColorForm() {
+        const createSec = document.getElementById('modalCreateSection');
+        const editSec = document.getElementById('modalEditSection');
+        if (createSec) createSec.style.display = '';
+        if (editSec) editSec.style.display = 'none';
+        const newNameEl = document.getElementById('modalNewColorName');
+        const newHexEl = document.getElementById('modalNewColorHex');
+        if (newNameEl) newNameEl.value = '';
+        if (newHexEl) newHexEl.value = '#000000';
+    }
+
+    function openEditColorForm() {
+        if (!modalSelectedColorId) return;
+        const createSec = document.getElementById('modalCreateSection');
+        const editSec = document.getElementById('modalEditSection');
+        if (createSec) createSec.style.display = 'none';
+        if (editSec) editSec.style.display = '';
+        updateEditSelectedColorSection();
+    }
+
+    async function refreshColorsFromServer(keepSelectedId = null) {
+        try {
+            const colors = await fetchJSON(`${SiteUrl}/colors/`);
+            colorsCache = colors || [];
+            if (keepSelectedId !== undefined && keepSelectedId !== null) {
+                modalSelectedColorId = keepSelectedId;
+            }
+            renderModalColors(document.getElementById('modalColorSearch').value || '');
+        } catch {}
+    }
+
+    async function modalCreateAndSelectColor() {
+        const name = document.getElementById('modalNewColorName').value.trim();
+        const hex = getValidHexOrDefault(document.getElementById('modalNewColorHex').value || '#000000');
+        if (!name) { alert('Укажите название цвета'); return; }
+        try {
+            const res = await fetch(`${SiteUrl}/colors/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
+                body: JSON.stringify({ color_name: name, color_hex: hex })
+            });
+            if (!res.ok) {
+                const t = await res.text();
+                throw new Error(t || 'Ошибка создания цвета');
+            }
+            const created = await res.json();
+            await refreshColorsFromServer(created.color_id);
+            openEditColorForm();
+        } catch (e) {
+            alert('Ошибка: ' + (e?.message || 'Не удалось создать цвет'));
+        }
+    }
+
+    async function modalSaveSelectedColor() {
+        const token = getCookie('Bearer');
+        const headers = { 'Content-Type': 'application/json', 'accept': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const payload = modalSelectedColorId ? { color_id: modalSelectedColorId } : { color_id: null };
+        try {
+            const res = await fetch(`${SiteUrl}/products/${ProductID}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const t = await res.text();
+                throw new Error(t || 'Не удалось сохранить цвет');
+            }
+            currentProductColorId = modalSelectedColorId || null;
+            const selected = colorsCache.find(c => c.color_id === currentProductColorId);
+            document.getElementById('product-color').textContent = selected ? selected.color_name : '—';
+            const swatch = document.getElementById('product-color-swatch');
+            if (swatch) swatch.style.background = selected ? getValidHexOrDefault(selected.color_hex || '') : '';
+            bootstrap.Modal.getInstance(document.getElementById('selectColorModal')).hide();
+        } catch (e) {
+            alert('Ошибка: ' + (e?.message || 'Не удалось сохранить цвет'));
+        }
+    }
+
+    async function modalEditSaveColor() {
+        const selected = colorsCache.find(c => c.color_id === modalSelectedColorId);
+        if (!selected) return;
+        const name = document.getElementById('modalEditColorName').value.trim();
+        const hex = getValidHexOrDefault(document.getElementById('modalEditColorHex').value || '#000000');
+        try {
+            const res = await fetch(`${SiteUrl}/colors/${selected.color_id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
+                body: JSON.stringify({ color_name: name || undefined, color_hex: hex || undefined })
+            });
+            if (!res.ok) {
+                const t = await res.text();
+                throw new Error(t || 'Не удалось сохранить цвет');
+            }
+            await refreshColorsFromServer(selected.color_id);
+            if (currentProductColorId === selected.color_id) {
+                const updated = colorsCache.find(c => c.color_id === selected.color_id);
+                document.getElementById('product-color').textContent = updated?.color_name || '—';
+                const swatch = document.getElementById('product-color-swatch');
+                if (swatch) swatch.style.background = getValidHexOrDefault(updated?.color_hex || '');
+            }
+        } catch (e) {
+            alert('Ошибка: ' + (e?.message || 'Не удалось сохранить цвет'));
+        }
+    }
+
+    async function modalEditDeleteColor() {
+        const selected = colorsCache.find(c => c.color_id === modalSelectedColorId);
+        if (!selected) return;
+        if (!confirm('Удалить выбранный цвет?')) return;
+        try {
+            const res = await fetch(`${SiteUrl}/colors/${selected.color_id}`, {
+                method: 'DELETE',
+                headers: { 'accept': 'application/json' }
+            });
+            if (!res.ok) {
+                let msg = 'Ошибка удаления цвета';
+                try {
+                    const data = await res.json();
+                    if (data?.detail) msg = data.detail;
+                } catch {}
+                alert(msg);
+                return;
+            }
+            await refreshColorsFromServer(null);
+            const createSec = document.getElementById('modalCreateSection');
+            const editSec = document.getElementById('modalEditSection');
+            if (editSec) editSec.style.display = 'none';
+            if (createSec) createSec.style.display = 'none';
+            if (currentProductColorId === selected.color_id) {
+                currentProductColorId = null;
+                document.getElementById('product-color').textContent = '—';
+                const swatch = document.getElementById('product-color-swatch');
+                if (swatch) swatch.style.background = '';
+            }
+        } catch (e) {
+            alert('Ошибка: ' + (e?.message || 'Не удалось удалить цвет'));
+        }
+    }
+
+    function modalClearColor() {
+        modalSelectedColorId = null;
+        renderModalColors(document.getElementById('modalColorSearch').value || '');
+    }
+
+    // Discounts modal
+    function renderModalDiscounts(filter = '') {
+        const list = document.getElementById('modalDiscountsList');
+        const saveBtn = document.getElementById('modalSaveDiscountBtn');
+        if (!list) return;
+        const search = filter.trim().toLowerCase();
+        const items = discountsCache.filter(d => !search || (d.name || '').toLowerCase().includes(search));
+        if (items.length === 0) {
+            list.innerHTML = '<div class="text-muted">Нет скидок</div>';
+            saveBtn.disabled = (modalSelectedDiscountId === currentProductDiscountId);
+            return;
+        }
+        list.innerHTML = items.map(d => {
+            const selectedClass = (modalSelectedDiscountId === d.id) ? 'selected' : '';
+            const status = d.is_active ? '<span class="badge bg-success ms-2">Активна</span>' : '<span class="badge bg-secondary ms-2">Неактивна</span>';
+            return `
+                <div class="modal-discount-item ${selectedClass}" data-id="${d.id}">
+                    <div>
+                        <strong>${d.name}</strong> <span class="text-muted">(${d.discount_percent}%)</span> ${status}
+                    </div>
+                    ${modalSelectedDiscountId === d.id ? '<span class="badge bg-primary">Выбрано</span>' : ''}
+                </div>
+            `;
+        }).join('');
+        Array.from(list.querySelectorAll('.modal-discount-item')).forEach(el => {
+            el.onclick = () => {
+                const id = parseInt(el.getAttribute('data-id'), 10);
+                modalSelectedDiscountId = id;
+                renderModalDiscounts(document.getElementById('modalDiscountSearch').value || '');
+            };
+        });
+        saveBtn.disabled = (modalSelectedDiscountId === currentProductDiscountId);
+    }
+
+    async function findCurrentDiscountIdForProduct() {
+        currentProductDiscountId = null;
+        // Try to find discount containing the product; stop early on first match
+        for (const d of discountsCache) {
+            try {
+                const prods = await fetchJSON(`${SiteUrl}/discounts/${d.id}/products`);
+                if (Array.isArray(prods) && prods.some(p => String(p.good_id) === String(ProductID))) {
+                    currentProductDiscountId = d.id;
+                    break;
+                }
+            } catch {}
+        }
+    }
+
+    async function openSelectDiscountModal() {
+        const m = new bootstrap.Modal(document.getElementById('selectDiscountModal'));
+        try {
+            if (!discountsCache.length) {
+                discountsCache = await fetchJSON(`${SiteUrl}/discounts/`);
+            }
+            if (productHasDiscount && currentProductDiscountId == null) {
+                await findCurrentDiscountIdForProduct();
+            }
+        } catch {}
+        modalSelectedDiscountId = currentProductDiscountId;
+        document.getElementById('modalDiscountSearch').value = '';
+        renderModalDiscounts('');
+        m.show();
+    }
+
+    async function modalSaveSelectedDiscount() {
+        try {
+            // No change
+            if (modalSelectedDiscountId === currentProductDiscountId) {
+                bootstrap.Modal.getInstance(document.getElementById('selectDiscountModal')).hide();
+                return;
+            }
+            // Remove from current if set
+            if (currentProductDiscountId != null) {
+                await fetch(`${SiteUrl}/discounts/${currentProductDiscountId}/products`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
+                    body: JSON.stringify({ product_ids: [parseInt(ProductID, 10)] })
+                });
+            }
+            // Add to selected if set
+            if (modalSelectedDiscountId != null) {
+                const res = await fetch(`${SiteUrl}/discounts/${modalSelectedDiscountId}/products`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
+                    body: JSON.stringify({ product_ids: [parseInt(ProductID, 10)] })
+                });
+                if (!res.ok) {
+                    const t = await res.text();
+                    throw new Error(t || 'Не удалось добавить товар в скидку');
+                }
+                currentProductDiscountId = modalSelectedDiscountId;
+            } else {
+                currentProductDiscountId = null;
+            }
+            // Refresh product details to update prices/flags
+            await loadProductDetails(ProductID);
+            bootstrap.Modal.getInstance(document.getElementById('selectDiscountModal')).hide();
+        } catch (e) {
+            alert('Ошибка: ' + (e?.message || 'Не удалось сохранить скидку'));
+        }
+    }
+
+    function modalClearDiscount() {
+        modalSelectedDiscountId = null;
+        renderModalDiscounts(document.getElementById('modalDiscountSearch').value || '');
+    }
+
+    async function loadColors() {
+        try {
+            const colors = await fetchJSON(`${SiteUrl}/colors/`);
+            colorsCache = colors || [];
+        } catch {}
+    }
+    async function loadDiscounts() {
+        try {
+            const discounts = await fetchJSON(`${SiteUrl}/discounts/`);
+            discountsCache = discounts || [];
+        } catch {}
+    }
+
+    document.addEventListener('input', (e) => {
+        if (e.target && e.target.id === 'modalColorSearch') {
+            renderModalColors(e.target.value || '');
+        }
+        if (e.target && e.target.id === 'modalDiscountSearch') {
+            renderModalDiscounts(e.target.value || '');
+        }
+    });
+
     document.addEventListener('DOMContentLoaded', async () => {
         await loadProductDetails(ProductID);
+        await loadColors();
+        await loadDiscounts();
+        const openColorBtn = document.getElementById('openSelectColorModalBtn');
+        if (openColorBtn) openColorBtn.addEventListener('click', openSelectColorModal);
+        document.getElementById('modalOpenEditBtn').addEventListener('click', openEditColorForm);
+        document.getElementById('modalOpenCreateBtn').addEventListener('click', openCreateColorForm);
+        document.getElementById('modalCreateAndSelectBtn').addEventListener('click', modalCreateAndSelectColor);
+        document.getElementById('modalSaveColorBtn').addEventListener('click', modalSaveSelectedColor);
+        document.getElementById('modalClearColorBtn').addEventListener('click', modalClearColor);
+        document.getElementById('modalEditColorSaveBtn').addEventListener('click', modalEditSaveColor);
+        document.getElementById('modalEditColorDeleteBtn').addEventListener('click', modalEditDeleteColor);
+
+        const openDiscountBtn = document.getElementById('openSelectDiscountModalBtn');
+        if (openDiscountBtn) openDiscountBtn.addEventListener('click', openSelectDiscountModal);
+        document.getElementById('modalSaveDiscountBtn').addEventListener('click', modalSaveSelectedDiscount);
+        document.getElementById('modalClearDiscountBtn').addEventListener('click', modalClearDiscount);
     });
 </script>
 {% endblock %} 

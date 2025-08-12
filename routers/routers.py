@@ -8,6 +8,7 @@ from .clients.router import router as clients
 from .report.router import router as report
 from .site.router import router as site
 from .settings.router import router as settings
+
 routers = APIRouter()
 
 routers.include_router(main)

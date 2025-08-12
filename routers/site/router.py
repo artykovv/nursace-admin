@@ -262,3 +262,29 @@ async def categories_products(
             "category_id": category_id
         }
     ) 
+
+@router.get("/discounts", response_class=HTMLResponse)
+async def base_root(
+    request: Request, 
+    is_authenticated: bool = Depends(get_auth_status), 
+    user_id: str = Depends(get_user_id_by_token)
+):
+    if not is_authenticated:
+        # Проверим, есть ли токен — если да, значит был 403, иначе — нет авторизации
+        token = request.cookies.get("Bearer")
+        if token:
+            return RedirectResponse(url="/403", status_code=303)
+        return RedirectResponse(url="/auth/login", status_code=303)
+
+    return templates.TemplateResponse(
+        "discounts/index.html",
+        {
+            "request": request,
+            "is_authenticated": is_authenticated,
+            "title": "Скидки",
+            "site_url_and_port": site_url_and_port,
+            "user_id": user_id,
+            "current_page": "site",
+            "current_mini_page": "discounts",
+        }
+    )
